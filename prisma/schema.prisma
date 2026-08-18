@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mariadb"
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  name          String
+  email         String        @unique
+  password      String
+  phone         String?
+  role          UserRole      @default(PATIENT)
+  isActive      Boolean       @default(true)
+  emailVerified Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  blogs         Blog[]
+  doctor        Doctor?
+  claims        DoctorClaim[]
+  reviews       Review[]
+}
+
+model Specialty {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  doctors   Doctor[]
+}
+
+model Doctor {
+  id               Int              @id @default(autoincrement())
+  userId           Int?             @unique
+  fullName         String
+  slug             String           @unique
+  profilePhoto     String?          @db.Text
+  gender           Gender?
+  bmdcNumber       String?          @unique
+  experienceYears  Int?
+  consultationFee  Int?
+  about            String?          @db.LongText
+  phone            String?
+  email            String?
+  website          String?
+  facebook         String?
+  linkedin         String?
+  hospitalName     String?
+  chamberAddress   String?          @db.Text
+  city             String?
+  area             String?
+  isVerified       Boolean          @default(false)
+  profileClaimed   Boolean          @default(false)
+  createdByAdmin   Boolean          @default(true)
+  status           DoctorStatus     @default(PUBLISHED)
+  specialtyId      Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  blogs            Blog[]
+  specialty        Specialty?       @relation(fields: [specialtyId], references: [id])
+  user             User?            @relation(fields: [userId], references: [id])
+  claims           DoctorClaim[]
+  doctorFacilities DoctorFacility[]
+  reviews          Review[]
+
+  @@index([fullName])
+  @@index([city])
+  @@index([area])
+  @@index([specialtyId])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  comment    String?  @db.Text
+  isApproved Boolean  @default(false)
+  doctorId   Int
+  userId     Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([userId])
+}
+
+model DoctorClaim {
+  id           Int         @id @default(autoincrement())
+  doctorId     Int
+  userId       Int
+  bmdcNumber   String?
+  licenseImage String?     @db.Text
+  note         String?     @db.Text
+  status       ClaimStatus @default(PENDING)
+  reviewedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  doctor       Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([userId])
+}
+
+model Blog {
+  id            Int        @id @default(autoincrement())
+  title         String
+  slug          String     @unique
+  excerpt       String?    @db.Text
+  content       String     @db.LongText
+  featuredImage String?    @db.Text
+  status        BlogStatus @default(DRAFT)
+  authorId      Int
+  doctorId      Int?
+  publishedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  author        User       @relation(fields: [authorId], references: [id])
+  doctor        Doctor?    @relation(fields: [doctorId], references: [id])
+
+  @@index([slug])
+  @@index([authorId], map: "Blog_authorId_fkey")
+  @@index([doctorId], map: "Blog_doctorId_fkey")
+}
+
+model Division {
+  id        Int        @id @default(autoincrement())
+  name      String
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  districts District[]
+}
+
+model District {
+  id         Int       @id @default(autoincrement())
+  name       String
+  slug       String    @unique
+  divisionId Int
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  division   Division  @relation(fields: [divisionId], references: [id])
+  upazilas   Upazila[]
+
+  @@index([divisionId])
+}
+
+model Upazila {
+  id         Int        @id @default(autoincrement())
+  name       String
+  slug       String     @unique
+  districtId Int
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  facilities Facility[]
+  district   District   @relation(fields: [districtId], references: [id])
+
+  @@index([districtId])
+}
+
+model Facility {
+  id               Int              @id @default(autoincrement())
+  name             String
+  slug             String           @unique
+  type             FacilityType     @default(HOSPITAL)
+  address          String?          @db.Text
+  phone            String?
+  upazilaId        Int
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  doctorFacilities DoctorFacility[]
+  upazila          Upazila          @relation(fields: [upazilaId], references: [id])
+
+  @@index([slug])
+  @@index([upazilaId])
+}
+
+model DoctorFacility {
+  id         Int      @id @default(autoincrement())
+  doctorId   Int
+  facilityId Int
+  createdAt  DateTime @default(now())
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, facilityId])
+  @@index([doctorId])
+  @@index([facilityId])
+}
+
+enum UserRole {
+  ADMIN
+  DOCTOR
+  PATIENT
+}
+
+enum DoctorStatus {
+  DRAFT
+  PUBLISHED
+  BLOCKED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FacilityType {
+  HOSPITAL
+  DIAGNOSTIC
+}

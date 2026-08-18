@@ -1,0 +1,6 @@
+{
+  "name": "Doctor Directory",
+  "description": "Find verified doctors, hospitals and specialties near you.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
