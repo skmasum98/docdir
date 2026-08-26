@@ -91,7 +91,7 @@ export function DoctorBulkImporterView() {
   const [options, setOptions] = useState<BulkImportOptions>({
     duplicateAction: "skip",
     defaultStatus: "PUBLISHED",
-    defaultVerified: true,
+    defaultVerified: false,
     createMissingSpecialties: true,
     createMissingFacilities: true,
     createMissingLocations: true,
@@ -909,7 +909,7 @@ export function DoctorBulkImporterView() {
             Ingestion Controls & Behavior
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Duplicate Handling</label>
               <select
@@ -935,6 +935,20 @@ export function DoctorBulkImporterView() {
               >
                 <option value="PUBLISHED">Published (Visible immediately)</option>
                 <option value="DRAFT">Draft (Requires admin review)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">BMDC Verification Badge</label>
+              <select
+                value={options.defaultVerified ? "true" : "false"}
+                onChange={(e) =>
+                  setOptions({ ...options, defaultVerified: e.target.value === "true" })
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs"
+              >
+                <option value="false">Unverified (No Verified Badge)</option>
+                <option value="true">Verified (Attach Verified Badge)</option>
               </select>
             </div>
 

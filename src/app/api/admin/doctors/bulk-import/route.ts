@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const options: BulkImportOptions = body.options || {
       duplicateAction: "skip",
       defaultStatus: "PUBLISHED",
-      defaultVerified: true,
+      defaultVerified: false,
       createMissingSpecialties: true,
       createMissingFacilities: true,
       createMissingLocations: true,
