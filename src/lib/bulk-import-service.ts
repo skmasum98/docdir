@@ -60,7 +60,7 @@ export class BulkImportService {
     options: BulkImportOptions = {
       duplicateAction: "skip",
       defaultStatus: "PUBLISHED",
-      defaultVerified: true,
+      defaultVerified: false,
       createMissingSpecialties: true,
       createMissingFacilities: true,
       createMissingLocations: true,
