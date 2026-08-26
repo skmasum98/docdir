@@ -22,14 +22,23 @@ export async function updateOwnDoctorProfileAction(
   });
   if (!doctor) return { ok: false, message: "Doctor profile not found." };
 
+  const facilityIds = formData.getAll("facilityIds").map((v) => Number(v)).filter(Boolean);
+  const hasFacilityInput = formData.has("facilityIdsUpdated") || formData.has("facilityIds");
+
   const parsed = doctorSelfUpdateSchema.safeParse({
     fullName: formData.get("fullName") || undefined,
+    degrees: formData.get("degrees") || undefined,
+    designation: formData.get("designation") || undefined,
     gender: formData.get("gender") || undefined,
     bmdcNumber: formData.get("bmdcNumber") || undefined,
     experienceYears: formData.get("experienceYears") || undefined,
     consultationFee: formData.get("consultationFee") || undefined,
+    followUpFee: formData.get("followUpFee") || undefined,
+    visitingHours: formData.get("visitingHours") || undefined,
+    services: formData.get("services") || undefined,
     about: formData.get("about") || undefined,
     phone: formData.get("phone") || undefined,
+    appointmentPhone: formData.get("appointmentPhone") || undefined,
     email: formData.get("email") || undefined,
     website: formData.get("website") || undefined,
     facebook: formData.get("facebook") || undefined,
@@ -39,6 +48,7 @@ export async function updateOwnDoctorProfileAction(
     city: formData.get("city") || undefined,
     area: formData.get("area") || undefined,
     specialtyId: formData.get("specialtyId") || undefined,
+    facilityIds: hasFacilityInput ? facilityIds : undefined,
   });
 
   if (!parsed.success) {
@@ -51,26 +61,53 @@ export async function updateOwnDoctorProfileAction(
   }
 
   const data = parsed.data;
-  await prisma.doctor.update({
-    where: { id: doctor.id },
-    data: {
-      fullName: data.fullName ?? doctor.fullName,
-      gender: data.gender ?? null,
-      bmdcNumber: data.bmdcNumber || null,
-      experienceYears: data.experienceYears ?? null,
-      consultationFee: data.consultationFee ?? null,
-      about: data.about || null,
-      phone: data.phone || null,
-      email: data.email || null,
-      website: data.website || null,
-      facebook: data.facebook || null,
-      linkedin: data.linkedin || null,
-      hospitalName: data.hospitalName || null,
-      chamberAddress: data.chamberAddress || null,
-      city: data.city || null,
-      area: data.area || null,
-      specialtyId: data.specialtyId ?? null,
-    },
+  const photoFromForm = formData.get("profilePhoto") as string | null;
+
+  await prisma.$transaction(async (tx: any) => {
+    await tx.doctor.update({
+      where: { id: doctor.id },
+      data: {
+        fullName: data.fullName ?? doctor.fullName,
+        profilePhoto: photoFromForm !== null ? (photoFromForm.trim() || null) : doctor.profilePhoto,
+        degrees: data.degrees !== undefined ? (data.degrees || null) : doctor.degrees,
+        designation: data.designation !== undefined ? (data.designation || null) : doctor.designation,
+        gender: data.gender ?? null,
+        bmdcNumber: data.bmdcNumber || null,
+        experienceYears: data.experienceYears ?? null,
+        consultationFee: data.consultationFee ?? null,
+        followUpFee: data.followUpFee ?? null,
+        visitingHours: data.visitingHours !== undefined ? (data.visitingHours || null) : doctor.visitingHours,
+        services: data.services !== undefined ? (data.services || null) : doctor.services,
+        about: data.about || null,
+        phone: data.phone || null,
+        appointmentPhone: data.appointmentPhone || null,
+        email: data.email || null,
+        website: data.website || null,
+        facebook: data.facebook || null,
+        linkedin: data.linkedin || null,
+        hospitalName: data.hospitalName || null,
+        chamberAddress: data.chamberAddress || null,
+        city: data.city || null,
+        area: data.area || null,
+        specialtyId: data.specialtyId ?? null,
+      },
+    });
+
+    if (photoFromForm !== null && doctor.userId) {
+      await tx.user.update({
+        where: { id: doctor.userId },
+        data: { image: photoFromForm.trim() || null },
+      });
+    }
+
+    if (hasFacilityInput) {
+      await tx.doctorFacility.deleteMany({ where: { doctorId: doctor.id } });
+      if (facilityIds.length > 0) {
+        await tx.doctorFacility.createMany({
+          data: facilityIds.map((fid) => ({ doctorId: doctor.id, facilityId: fid })),
+        });
+      }
+    }
   });
 
   revalidatePath("/dashboard");

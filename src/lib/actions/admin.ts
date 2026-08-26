@@ -7,6 +7,7 @@ import { requireAdmin } from "../auth-helpers";
 import {
   specialtySchema,
   facilitySchema,
+  facilityUpdateSchema,
   doctorCreateSchema,
   doctorUpdateSchema,
   divisionSchema,
@@ -16,7 +17,11 @@ import {
   userUpdateSchema,
   reviewDecisionSchema,
   claimDecisionSchema,
+  facilityClaimDecisionSchema,
+  facilityTestSchema,
+  facilityTestUpdateSchema,
 } from "../validation";
+import { DEFAULT_DIAGNOSTIC_TESTS } from "../diagnostic-tests-data";
 import { UserRole } from "../enums";
 import { uniqueSlug } from "../slug";
 import type { FormState } from "../form";
@@ -181,6 +186,48 @@ export async function createFacilityAction(
     },
   });
   revalidatePath("/admin/facilities");
+  revalidatePath("/facilities");
+  revalidatePath("/search");
+  redirect("/admin/facilities?saved=1");
+}
+
+export async function updateFacilityAction(
+  _prev: FormState | undefined,
+  formData: FormData,
+): Promise<FormState> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!Number.isFinite(id)) return { ok: false, message: "Invalid facility ID." };
+
+  const parsed = facilityUpdateSchema.safeParse({
+    name: formData.get("name") || undefined,
+    type: formData.get("type") || undefined,
+    address: formData.get("address") || undefined,
+    phone: formData.get("phone") || undefined,
+    upazilaId: formData.get("upazilaId") ? Number(formData.get("upazilaId")) : undefined,
+  });
+
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid input.", fieldErrors: fieldErrorsFromZod(parsed.error) };
+  }
+
+  const existing = await prisma.facility.findUnique({ where: { id } });
+  if (!existing) return { ok: false, message: "Facility not found." };
+
+  await prisma.facility.update({
+    where: { id },
+    data: {
+      name: parsed.data.name ?? existing.name,
+      type: parsed.data.type ?? existing.type,
+      address: parsed.data.address === undefined ? existing.address : parsed.data.address || null,
+      phone: parsed.data.phone === undefined ? existing.phone : parsed.data.phone || null,
+      upazilaId: parsed.data.upazilaId ?? existing.upazilaId,
+    },
+  });
+
+  revalidatePath("/admin/facilities");
+  revalidatePath(`/facility/${existing.slug}`);
+  revalidatePath("/facilities");
   revalidatePath("/search");
   redirect("/admin/facilities?saved=1");
 }
@@ -225,6 +272,7 @@ export async function createDoctorAction(
     return { ok: false, message: "Please fix the errors below.", fieldErrors: fieldErrorsFromZod(parsed.error) };
 
   const data = parsed.data;
+  const photoFromForm = formData.get("profilePhoto") as string | null;
   const baseSlug = data.bmdcNumber
     ? `${data.fullName}-${data.bmdcNumber}`
     : data.fullName;
@@ -237,12 +285,19 @@ export async function createDoctorAction(
     data: {
       fullName: data.fullName,
       slug,
+      profilePhoto: photoFromForm ? photoFromForm.trim() || null : null,
+      degrees: data.degrees || null,
+      designation: data.designation || null,
       gender: data.gender ?? null,
       bmdcNumber: data.bmdcNumber || null,
       experienceYears: data.experienceYears ?? null,
       consultationFee: data.consultationFee ?? null,
+      followUpFee: data.followUpFee ?? null,
+      visitingHours: data.visitingHours || null,
+      services: data.services || null,
       about: data.about || null,
       phone: data.phone || null,
+      appointmentPhone: data.appointmentPhone || null,
       email: data.email || null,
       website: data.website || null,
       facebook: data.facebook || null,
@@ -273,14 +328,21 @@ export async function updateDoctorAction(
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return { ok: false, message: "Invalid id." };
   const facilityIds = formData.getAll("facilityIds").map((v) => Number(v)).filter(Boolean);
+  const photoFromForm = formData.get("profilePhoto") as string | null;
   const parsed = doctorUpdateSchema.safeParse({
     fullName: formData.get("fullName") || undefined,
+    degrees: formData.get("degrees") || undefined,
+    designation: formData.get("designation") || undefined,
     gender: formData.get("gender") || undefined,
     bmdcNumber: formData.get("bmdcNumber") || undefined,
     experienceYears: formData.get("experienceYears") || undefined,
     consultationFee: formData.get("consultationFee") || undefined,
+    followUpFee: formData.get("followUpFee") || undefined,
+    visitingHours: formData.get("visitingHours") || undefined,
+    services: formData.get("services") || undefined,
     about: formData.get("about") || undefined,
     phone: formData.get("phone") || undefined,
+    appointmentPhone: formData.get("appointmentPhone") || undefined,
     email: formData.get("email") || undefined,
     website: formData.get("website") || undefined,
     facebook: formData.get("facebook") || undefined,
@@ -306,12 +368,19 @@ export async function updateDoctorAction(
       where: { id },
       data: {
         fullName: data.fullName ?? existing.fullName,
+        profilePhoto: photoFromForm !== null ? (photoFromForm.trim() || null) : existing.profilePhoto,
+        degrees: data.degrees === undefined ? existing.degrees : data.degrees || null,
+        designation: data.designation === undefined ? existing.designation : data.designation || null,
         gender: data.gender === undefined ? existing.gender : data.gender,
         bmdcNumber: data.bmdcNumber === undefined ? existing.bmdcNumber : data.bmdcNumber || null,
         experienceYears: data.experienceYears === undefined ? existing.experienceYears : data.experienceYears,
         consultationFee: data.consultationFee === undefined ? existing.consultationFee : data.consultationFee,
+        followUpFee: data.followUpFee === undefined ? existing.followUpFee : data.followUpFee,
+        visitingHours: data.visitingHours === undefined ? existing.visitingHours : data.visitingHours || null,
+        services: data.services === undefined ? existing.services : data.services || null,
         about: data.about === undefined ? existing.about : data.about || null,
         phone: data.phone === undefined ? existing.phone : data.phone || null,
+        appointmentPhone: data.appointmentPhone === undefined ? existing.appointmentPhone : data.appointmentPhone || null,
         email: data.email === undefined ? existing.email : data.email || null,
         website: data.website === undefined ? existing.website : data.website || null,
         facebook: data.facebook === undefined ? existing.facebook : data.facebook || null,
@@ -325,6 +394,12 @@ export async function updateDoctorAction(
         status: data.status ?? existing.status,
       },
     });
+    if (photoFromForm !== null && existing.userId) {
+      await tx.user.update({
+        where: { id: existing.userId },
+        data: { image: photoFromForm.trim() || null },
+      });
+    }
     if (data.facilityIds) {
       await tx.doctorFacility.deleteMany({ where: { doctorId: id } });
       if (data.facilityIds.length) {
@@ -410,6 +485,8 @@ export async function updateUserAction(
   });
   if (!parsed.success)
     return { ok: false, message: "Invalid input.", fieldErrors: fieldErrorsFromZod(parsed.error) };
+  const imageFromForm = formData.get("image") as string | null;
+
   await prisma.user.update({
     where: { id },
     data: {
@@ -417,9 +494,22 @@ export async function updateUserAction(
       phone: parsed.data.phone || null,
       isActive: parsed.data.isActive,
       role: parsed.data.role,
+      ...(imageFromForm !== null ? { image: imageFromForm.trim() || null } : {}),
     },
   });
+
+  if (imageFromForm !== null) {
+    const doc = await prisma.doctor.findFirst({ where: { userId: id } });
+    if (doc) {
+      await prisma.doctor.update({
+        where: { id: doc.id },
+        data: { profilePhoto: imageFromForm.trim() || null },
+      });
+    }
+  }
+
   revalidatePath("/admin/users");
+  revalidatePath("/dashboard");
   redirect("/admin/users?saved=1");
 }
 
@@ -492,3 +582,273 @@ export async function claimDecisionAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/claims");
   revalidatePath("/admin/doctors");
 }
+
+export async function facilityClaimDecisionAction(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const parsed = facilityClaimDecisionSchema.safeParse({
+    claimId: formData.get("claimId"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) return;
+
+  const claim = await prisma.facilityClaim.findUnique({
+    where: { id: parsed.data.claimId },
+    include: { user: true, facility: true },
+  });
+  if (!claim) return;
+
+  await prisma.facilityClaim.update({
+    where: { id: parsed.data.claimId },
+    data: { status: parsed.data.status, reviewedAt: new Date() },
+  });
+
+  if (parsed.data.status === "APPROVED") {
+    // Check if user is ADMIN; if not, promote to FACILITY_ADMIN
+    const newRole = claim.user.role === UserRole.ADMIN ? UserRole.ADMIN : UserRole.FACILITY_ADMIN;
+
+    await prisma.$transaction([
+      prisma.facility.update({
+        where: { id: claim.facilityId },
+        data: {
+          profileClaimed: true,
+          userId: claim.userId,
+          isVerified: true,
+          phone: claim.facility.phone || claim.officialPhone,
+          hotline: claim.facility.hotline || claim.officialPhone,
+          email: claim.facility.email || claim.officialEmail,
+        },
+      }),
+      prisma.user.update({
+        where: { id: claim.userId },
+        data: { role: newRole },
+      }),
+    ]);
+  } else if (parsed.data.status === "REJECTED") {
+    // If no other facilities owned, and role was FACILITY_ADMIN, revert to PATIENT
+    const otherClaims = await prisma.facility.count({
+      where: { userId: claim.userId, id: { not: claim.facilityId } },
+    });
+    if (otherClaims === 0 && claim.user.role === UserRole.FACILITY_ADMIN) {
+      await prisma.user.update({
+        where: { id: claim.userId },
+        data: { role: UserRole.PATIENT },
+      });
+    }
+  }
+
+  void session;
+  revalidatePath("/admin/claims");
+  revalidatePath("/facilities");
+  revalidatePath(`/facility/${claim.facility.slug}`);
+}
+
+export async function createFacilityTestAction(
+  _prev: FormState | undefined,
+  formData: FormData,
+): Promise<FormState> {
+  await requireAdmin();
+  const facilityId = Number(formData.get("facilityId"));
+  const parsed = facilityTestSchema.safeParse({
+    facilityId,
+    code: formData.get("code"),
+    name: formData.get("name"),
+    category: formData.get("category"),
+    price: formData.get("price"),
+    discountPrice: formData.get("discountPrice") || undefined,
+    sampleType: formData.get("sampleType") || undefined,
+    deliveryTime: formData.get("deliveryTime") || undefined,
+    preparation: formData.get("preparation") || undefined,
+    homeSampleAvailable: formData.get("homeSampleAvailable") === "on",
+    description: formData.get("description") || undefined,
+    isActive: formData.get("isActive") !== "off",
+  });
+
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid input. Check required fields.", fieldErrors: fieldErrorsFromZod(parsed.error) };
+  }
+
+  const facility = await prisma.facility.findUnique({ where: { id: facilityId } });
+  if (!facility) return { ok: false, message: "Facility not found." };
+
+  await prisma.facilityTest.create({
+    data: {
+      facilityId: parsed.data.facilityId,
+      code: parsed.data.code.toUpperCase().trim(),
+      name: parsed.data.name.trim(),
+      category: parsed.data.category.trim(),
+      price: parsed.data.price,
+      discountPrice: parsed.data.discountPrice !== undefined && parsed.data.discountPrice !== "" ? Number(parsed.data.discountPrice) : null,
+      sampleType: parsed.data.sampleType?.trim() || null,
+      deliveryTime: parsed.data.deliveryTime?.trim() || null,
+      preparation: parsed.data.preparation?.trim() || null,
+      homeSampleAvailable: parsed.data.homeSampleAvailable ?? false,
+      description: parsed.data.description?.trim() || null,
+      isActive: parsed.data.isActive ?? true,
+    },
+  });
+
+  revalidatePath(`/admin/facilities/${facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+  revalidatePath(`/facility/${facility.slug}`);
+  revalidatePath("/facilities");
+  return { ok: true, message: `Added "${parsed.data.name}" to catalog.` };
+}
+
+export async function updateFacilityTestAction(
+  _prev: FormState | undefined,
+  formData: FormData,
+): Promise<FormState> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!Number.isFinite(id)) return { ok: false, message: "Invalid test ID." };
+
+  const parsed = facilityTestUpdateSchema.safeParse({
+    code: formData.get("code") || undefined,
+    name: formData.get("name") || undefined,
+    category: formData.get("category") || undefined,
+    price: formData.get("price") !== null ? Number(formData.get("price")) : undefined,
+    discountPrice: formData.get("discountPrice") !== null && formData.get("discountPrice") !== "" ? Number(formData.get("discountPrice")) : null,
+    sampleType: formData.get("sampleType") || undefined,
+    deliveryTime: formData.get("deliveryTime") || undefined,
+    preparation: formData.get("preparation") || undefined,
+    homeSampleAvailable: formData.get("homeSampleAvailable") === "on",
+    description: formData.get("description") || undefined,
+    isActive: formData.get("isActive") === "on",
+  });
+
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid input.", fieldErrors: fieldErrorsFromZod(parsed.error) };
+  }
+
+  const existing = await prisma.facilityTest.findUnique({
+    where: { id },
+    include: { facility: { select: { id: true, slug: true } } },
+  });
+  if (!existing) return { ok: false, message: "Test not found." };
+
+  await prisma.facilityTest.update({
+    where: { id },
+    data: {
+      code: parsed.data.code ? parsed.data.code.toUpperCase().trim() : existing.code,
+      name: parsed.data.name ? parsed.data.name.trim() : existing.name,
+      category: parsed.data.category ? parsed.data.category.trim() : existing.category,
+      price: parsed.data.price !== undefined ? parsed.data.price : existing.price,
+      discountPrice:
+        typeof parsed.data.discountPrice === "number"
+          ? parsed.data.discountPrice
+          : parsed.data.discountPrice === null || parsed.data.discountPrice === ""
+          ? null
+          : existing.discountPrice,
+      sampleType: parsed.data.sampleType !== undefined ? parsed.data.sampleType.trim() || null : existing.sampleType,
+      deliveryTime: parsed.data.deliveryTime !== undefined ? parsed.data.deliveryTime.trim() || null : existing.deliveryTime,
+      preparation: parsed.data.preparation !== undefined ? parsed.data.preparation.trim() || null : existing.preparation,
+      homeSampleAvailable: parsed.data.homeSampleAvailable !== undefined ? parsed.data.homeSampleAvailable : existing.homeSampleAvailable,
+      description: parsed.data.description !== undefined ? parsed.data.description.trim() || null : existing.description,
+      isActive: parsed.data.isActive !== undefined ? parsed.data.isActive : existing.isActive,
+    },
+  });
+
+  revalidatePath(`/admin/facilities/${existing.facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+  revalidatePath(`/facility/${existing.facility.slug}`);
+  revalidatePath("/facilities");
+  return { ok: true, message: `Updated "${existing.name}" successfully.` };
+}
+
+export async function deleteFacilityTestAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!Number.isFinite(id)) return;
+
+  const test = await prisma.facilityTest.findUnique({
+    where: { id },
+    include: { facility: { select: { id: true, slug: true } } },
+  });
+  if (!test) return;
+
+  await prisma.facilityTest.delete({ where: { id } });
+
+  revalidatePath(`/admin/facilities/${test.facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+  revalidatePath(`/facility/${test.facility.slug}`);
+  revalidatePath("/facilities");
+}
+
+export async function seedFacilityTestsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const facilityId = Number(formData.get("facilityId"));
+  const overwrite = formData.get("overwrite") === "true";
+  if (!Number.isFinite(facilityId)) return;
+
+  const facility = await prisma.facility.findUnique({ where: { id: facilityId } });
+  if (!facility) return;
+
+  if (overwrite) {
+    await prisma.facilityTest.deleteMany({ where: { facilityId } });
+  }
+
+  // Insert standard diagnostic test catalog
+  const currentCodes = new Set(
+    (await prisma.facilityTest.findMany({ where: { facilityId }, select: { code: true } })).map((t) => t.code)
+  );
+
+  for (const t of DEFAULT_DIAGNOSTIC_TESTS) {
+    if (!currentCodes.has(t.code)) {
+      await prisma.facilityTest.create({
+        data: {
+          facilityId,
+          code: t.code,
+          name: t.name,
+          category: t.category,
+          price: t.price,
+          discountPrice: t.discountPrice || null,
+          sampleType: t.sampleType,
+          deliveryTime: t.deliveryTime,
+          preparation: t.preparation,
+          homeSampleAvailable: t.homeSampleAvailable,
+          description: t.description,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  revalidatePath(`/admin/facilities/${facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+  revalidatePath(`/facility/${facility.slug}`);
+  revalidatePath("/facilities");
+}
+
+export async function bulkDiscountFacilityTestsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const facilityId = Number(formData.get("facilityId"));
+  const percentage = Number(formData.get("percentage")); // e.g. 10 for 10% discount
+  if (!Number.isFinite(facilityId) || !Number.isFinite(percentage) || percentage < 0 || percentage > 90) return;
+
+  const facility = await prisma.facility.findUnique({ where: { id: facilityId } });
+  if (!facility) return;
+
+  const tests = await prisma.facilityTest.findMany({ where: { facilityId } });
+
+  for (const t of tests) {
+    if (percentage === 0) {
+      // Remove discounts
+      await prisma.facilityTest.update({
+        where: { id: t.id },
+        data: { discountPrice: null },
+      });
+    } else {
+      const discount = Math.round(t.price * (1 - percentage / 100));
+      await prisma.facilityTest.update({
+        where: { id: t.id },
+        data: { discountPrice: discount },
+      });
+    }
+  }
+
+  revalidatePath(`/admin/facilities/${facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+  revalidatePath(`/facility/${facility.slug}`);
+  revalidatePath("/facilities");
+}
+

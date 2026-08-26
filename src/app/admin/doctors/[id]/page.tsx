@@ -12,16 +12,27 @@ export default async function EditDoctorPage({ params, searchParams }: Props) {
   const doctorId = Number(id);
   if (!Number.isFinite(doctorId)) notFound();
 
-  const [doctor, specialties, facilities] = await Promise.all([
+  const [doctor, specialties] = await Promise.all([
     prisma.doctor.findUnique({
       where: { id: doctorId },
       include: {
-        doctorFacilities: { select: { facilityId: true } },
+        doctorFacilities: {
+          include: {
+            facility: {
+              include: {
+                upazila: {
+                  include: {
+                    district: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         user: { select: { id: true, email: true, name: true } },
       },
     }),
     prisma.specialty.findMany({ orderBy: { name: "asc" } }),
-    prisma.facility.findMany({ orderBy: { name: "asc" } }),
   ]);
   if (!doctor) notFound();
 
@@ -63,12 +74,19 @@ export default async function EditDoctorPage({ params, searchParams }: Props) {
           doctor={{
             id: doctor.id,
             fullName: doctor.fullName,
+            profilePhoto: doctor.profilePhoto,
+            degrees: doctor.degrees,
+            designation: doctor.designation,
             gender: doctor.gender ?? null,
             bmdcNumber: doctor.bmdcNumber,
             experienceYears: doctor.experienceYears,
             consultationFee: doctor.consultationFee,
+            followUpFee: doctor.followUpFee,
+            visitingHours: doctor.visitingHours,
+            services: doctor.services,
             about: doctor.about,
             phone: doctor.phone,
+            appointmentPhone: doctor.appointmentPhone,
             email: doctor.email,
             website: doctor.website,
             facebook: doctor.facebook,
@@ -83,7 +101,18 @@ export default async function EditDoctorPage({ params, searchParams }: Props) {
             facilityIds: doctor.doctorFacilities.map((df) => df.facilityId),
           }}
           specialties={specialties.map((s) => ({ id: s.id, name: s.name }))}
-          facilities={facilities.map((f) => ({ id: f.id, name: f.name, type: f.type }))}
+          attachedFacilities={doctor.doctorFacilities.map((df) => ({
+            id: df.facility.id,
+            name: df.facility.name,
+            type: df.facility.type,
+            address: df.facility.address,
+            location: [
+              df.facility.upazila?.name,
+              df.facility.upazila?.district?.name,
+            ]
+              .filter(Boolean)
+              .join(", "),
+          }))}
         />
       </div>
 

@@ -45,18 +45,54 @@ export const loginSchema = z
   })
   .strict();
 
+export const forgotPasswordSchema = z
+  .object({
+    identifier: z.string().trim().min(3, "Please enter your email or phone number"),
+    method: z.enum(["EMAIL", "WHATSAPP"]).default("EMAIL"),
+  })
+  .strict();
+
+export const resetPasswordSchema = z
+  .object({
+    identifier: z.string().trim().min(3, "Email or phone is required"),
+    otp: z.string().trim().min(4, "Please enter the verification code").max(10),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export const specialtySchema = z.object({
   name: z.string().trim().min(2).max(80),
 });
 
 export const doctorCreateSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
+  degrees: z.string().trim().max(500).optional().or(z.literal("")),
+  designation: z.string().trim().max(160).optional().or(z.literal("")),
   gender: z.nativeEnum(Gender).optional(),
   bmdcNumber: z.string().trim().max(60).optional().or(z.literal("")),
   experienceYears: z.coerce.number().int().min(0).max(80).optional(),
   consultationFee: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  followUpFee: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  visitingHours: z.string().trim().max(500).optional().or(z.literal("")),
+  services: z.string().trim().max(2000).optional().or(z.literal("")),
   about: z.string().trim().max(4000).optional().or(z.literal("")),
   phone: phoneSchema,
+  appointmentPhone: phoneSchema,
   email: z.string().trim().email().max(160).optional().or(z.literal("")),
   website: z.string().trim().url().max(300).optional().or(z.literal("")),
   facebook: z.string().trim().max(300).optional().or(z.literal("")),
@@ -79,7 +115,6 @@ export const doctorSelfUpdateSchema = doctorCreateSchema
   .omit({
     isVerified: true,
     status: true,
-    facilityIds: true,
   })
   .partial();
 
@@ -98,6 +133,22 @@ export const claimCreateSchema = z.object({
   note: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
+export const facilityClaimCreateSchema = z.object({
+  facilityId: z.coerce.number().int().positive(),
+  officialPhone: z.string().trim().min(5, "Official contact number is required").max(50),
+  officialEmail: z.string().trim().email("Valid work email is required").max(160).optional().or(z.literal("")),
+  designation: z.string().trim().min(2, "Your role / designation is required").max(120),
+  tradeLicenseNumber: z.string().trim().max(100).optional().or(z.literal("")),
+  tradeLicenseImage: z.string().trim().max(500).optional().or(z.literal("")),
+  authorizationLetter: z.string().trim().max(500).optional().or(z.literal("")),
+  note: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+export const facilityClaimDecisionSchema = z.object({
+  claimId: z.coerce.number().int().positive(),
+  status: z.nativeEnum(ClaimStatus),
+});
+
 export const claimDecisionSchema = z.object({
   claimId: z.coerce.number().int().positive(),
   status: z.nativeEnum(ClaimStatus),
@@ -113,8 +164,43 @@ export const facilitySchema = z.object({
   type: z.nativeEnum(FacilityType).optional(),
   address: z.string().trim().max(500).optional().or(z.literal("")),
   phone: phoneSchema,
+  hotline: phoneSchema,
+  email: z.string().trim().email().max(160).optional().or(z.literal("")),
+  website: z.string().trim().max(300).optional().or(z.literal("")),
+  emergencyContact: phoneSchema,
   upazilaId: z.coerce.number().int().positive(),
 });
+
+export const facilityUpdateSchema = facilitySchema.partial();
+export type FacilityInput = z.infer<typeof facilitySchema>;
+
+export const facilitySelfUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(160).optional(),
+  phone: phoneSchema,
+  hotline: phoneSchema,
+  email: z.string().trim().email().max(160).optional().or(z.literal("")),
+  website: z.string().trim().max(300).optional().or(z.literal("")),
+  emergencyContact: phoneSchema,
+  address: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
+export const facilityTestSchema = z.object({
+  facilityId: z.coerce.number().int().positive(),
+  code: z.string().trim().min(1, "Test code is required").max(50),
+  name: z.string().trim().min(2, "Test name is required").max(200),
+  category: z.string().trim().min(1, "Category is required").max(100),
+  price: z.coerce.number().int().min(0, "Price must be positive"),
+  discountPrice: z.coerce.number().int().min(0).optional().or(z.literal("")),
+  sampleType: z.string().trim().max(100).optional().or(z.literal("")),
+  deliveryTime: z.string().trim().max(150).optional().or(z.literal("")),
+  preparation: z.string().trim().max(1000).optional().or(z.literal("")),
+  homeSampleAvailable: z.coerce.boolean().optional(),
+  description: z.string().trim().max(2000).optional().or(z.literal("")),
+  isActive: z.coerce.boolean().optional(),
+});
+
+export const facilityTestUpdateSchema = facilityTestSchema.partial();
+export type FacilityTestInput = z.infer<typeof facilityTestSchema>;
 
 export const divisionSchema = z.object({
   name: z.string().trim().min(2).max(80),

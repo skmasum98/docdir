@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { deleteDoctorAction } from "@/lib/actions/admin";
+import { UserAvatar } from "@/components/user-avatar";
 
 export const metadata = { title: "Doctors | Admin" };
 
@@ -23,14 +24,25 @@ export default async function AdminDoctorsPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold text-slate-900">Doctors</h1>
-        <Link
-          href="/admin/doctors/new"
-          className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          Add doctor
-        </Link>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-slate-900">Doctors</h1>
+          <p className="text-xs text-slate-500 mt-1">Manage verified medical specialists and physician profiles</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/doctors/import"
+            className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-900 hover:bg-indigo-100 transition inline-flex items-center gap-1.5 shadow-2xs"
+          >
+            <span>⚡ Bulk Import (CSV / TSV)</span>
+          </Link>
+          <Link
+            href="/admin/doctors/new"
+            className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition"
+          >
+            Add doctor
+          </Link>
+        </div>
       </div>
 
       {sp.saved === "1" && (
@@ -67,12 +79,15 @@ export default async function AdminDoctorsPage({ searchParams }: Props) {
             {doctors.map((d) => (
               <tr key={d.id}>
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/doctors/${d.id}`}
-                    className="font-semibold text-slate-900 hover:underline"
-                  >
-                    {d.fullName}
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <UserAvatar src={d.profilePhoto} name={d.fullName} size="sm" />
+                    <Link
+                      href={`/admin/doctors/${d.id}`}
+                      className="font-semibold text-slate-900 hover:underline"
+                    >
+                      {d.fullName}
+                    </Link>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{d.specialty?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{d.city ?? "—"}</td>

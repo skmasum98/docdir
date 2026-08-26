@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 const protectedRoutes = ["/dashboard", "/admin"];
 const adminRoutes = ["/admin"];
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = protectedRoutes.some((route) => pathname.startsWith(route));
@@ -18,6 +18,7 @@ export default async function middleware(request: NextRequest) {
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET || "doctor-directory-secret-key-12345",
+    cookieName: "next-auth.session-token",
   });
 
   if (!token) {

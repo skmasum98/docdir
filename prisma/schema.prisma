@@ -1,10 +1,9 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mariadb"
+  provider = "mysql"
 }
 
 model User {
@@ -13,6 +12,7 @@ model User {
   email         String        @unique
   password      String
   phone         String?
+  image         String?       @db.Text
   role          UserRole      @default(PATIENT)
   isActive      Boolean       @default(true)
   emailVerified Boolean       @default(false)
@@ -20,7 +20,9 @@ model User {
   updatedAt     DateTime      @updatedAt
   blogs         Blog[]
   doctor        Doctor?
+  facility      Facility?
   claims        DoctorClaim[]
+  facilityClaims FacilityClaim[]
   reviews       Review[]
 }
 
@@ -39,12 +41,18 @@ model Doctor {
   fullName         String
   slug             String           @unique
   profilePhoto     String?          @db.Text
+  degrees          String?          @db.Text
+  designation      String?
   gender           Gender?
   bmdcNumber       String?          @unique
   experienceYears  Int?
   consultationFee  Int?
+  followUpFee      Int?
+  visitingHours    String?          @db.Text
+  services         String?          @db.Text
   about            String?          @db.LongText
   phone            String?
+  appointmentPhone String?
   email            String?
   website          String?
   facebook         String?
@@ -164,19 +172,73 @@ model Upazila {
 
 model Facility {
   id               Int              @id @default(autoincrement())
+  userId           Int?             @unique
   name             String
   slug             String           @unique
   type             FacilityType     @default(HOSPITAL)
   address          String?          @db.Text
   phone            String?
+  hotline          String?
+  email            String?
+  website          String?
+  emergencyContact String?
+  profileClaimed   Boolean          @default(false)
+  isVerified       Boolean          @default(false)
   upazilaId        Int
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  user             User?            @relation(fields: [userId], references: [id])
   doctorFacilities DoctorFacility[]
+  tests            FacilityTest[]
   upazila          Upazila          @relation(fields: [upazilaId], references: [id])
+  claims           FacilityClaim[]
 
   @@index([slug])
   @@index([upazilaId])
+}
+
+model FacilityTest {
+  id                  Int          @id @default(autoincrement())
+  facilityId          Int
+  code                String
+  name                String
+  category            String
+  price               Int
+  discountPrice       Int?
+  sampleType          String?
+  deliveryTime        String?
+  preparation         String?      @db.Text
+  homeSampleAvailable Boolean      @default(false)
+  description         String?      @db.Text
+  isActive            Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  facility            Facility     @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
+  @@index([category])
+  @@index([name])
+}
+
+model FacilityClaim {
+  id                  Int         @id @default(autoincrement())
+  facilityId          Int
+  userId              Int
+  officialPhone       String?
+  officialEmail       String?
+  designation         String?
+  tradeLicenseNumber  String?
+  tradeLicenseImage   String?     @db.Text
+  authorizationLetter String?     @db.Text
+  note                String?     @db.Text
+  status              ClaimStatus @default(PENDING)
+  reviewedAt          DateTime?
+  createdAt           DateTime    @default(now())
+  facility            Facility    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([facilityId])
+  @@index([userId])
 }
 
 model DoctorFacility {
@@ -196,6 +258,7 @@ enum UserRole {
   ADMIN
   DOCTOR
   PATIENT
+  FACILITY_ADMIN
 }
 
 enum DoctorStatus {
@@ -225,4 +288,7 @@ enum BlogStatus {
 enum FacilityType {
   HOSPITAL
   DIAGNOSTIC
+  CLINIC
+  PHARMACY
+  CHAMBER
 }

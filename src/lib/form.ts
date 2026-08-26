@@ -2,6 +2,7 @@ export type FormState = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string>;
+  data?: Record<string, any>;
 };
 
 export const initialFormState: FormState = { ok: false };

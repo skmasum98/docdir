@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { deleteUserAction } from "@/lib/actions/admin";
 import UserEditForm from "./user-form";
+import { UserAvatar } from "@/components/user-avatar";
 
 export const metadata = { title: "Users | Admin" };
 
@@ -12,27 +13,36 @@ export default async function AdminUsersPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold text-slate-900">Users</h1>
+      <div>
+        <h1 className="text-3xl font-semibold text-slate-900">User Management</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Manage user accounts, roles, permissions, and profile pictures.
+        </p>
+      </div>
+
       {sp.saved === "1" && (
         <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          Saved successfully.
+          User changes saved successfully.
         </div>
       )}
       <div className="space-y-3">
         {users.map((u) => (
           <details
             key={u.id}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300"
           >
             <summary className="cursor-pointer list-none">
               <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-slate-900">{u.name}</p>
-                  <p className="text-xs text-slate-500">{u.email}</p>
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <UserAvatar src={u.image} name={u.name} size="md" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 truncate">{u.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <span
-                    className={`rounded-full px-3 py-1 text-xs ${
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
                       u.role === "ADMIN"
                         ? "bg-emerald-50 text-emerald-800"
                         : u.role === "DOCTOR"
@@ -47,6 +57,9 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                       Disabled
                     </span>
                   )}
+                  <span className="text-xs text-slate-400 font-medium pl-1 group-open:rotate-180 transition-transform">
+                    ▼
+                  </span>
                 </div>
               </div>
             </summary>
@@ -57,6 +70,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                   name: u.name,
                   email: u.email,
                   phone: u.phone,
+                  image: u.image,
                   role: u.role,
                   isActive: u.isActive,
                   createdAt: u.createdAt,
@@ -66,7 +80,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                 <input type="hidden" name="id" value={u.id} />
                 <button
                   type="submit"
-                  className="rounded-2xl border border-rose-200 px-3 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                  className="rounded-2xl border border-rose-200 px-3.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition"
                 >
                   Delete user
                 </button>
@@ -75,7 +89,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           </details>
         ))}
         {users.length === 0 && (
-          <p className="text-sm text-slate-500">No users yet.</p>
+          <p className="text-sm text-slate-500">No users found.</p>
         )}
       </div>
     </div>

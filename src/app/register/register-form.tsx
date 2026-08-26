@@ -1,12 +1,33 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useRef } from "react";
 import Link from "next/link";
 import { registerAction } from "@/lib/actions/auth";
 import { initialFormState, fieldError } from "@/lib/form";
+import { Camera, User, X } from "lucide-react";
+import Image from "next/image";
 
 export default function RegisterForm() {
   const [state, formAction, pending] = useActionState(registerAction, initialFormState);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }
+
+  function handleClearImage() {
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
 
   return (
     <form action={formAction} className="space-y-5">
@@ -21,6 +42,63 @@ export default function RegisterForm() {
           {state.message}
         </div>
       )}
+
+      {/* Optional Profile Photo */}
+      <div className="flex flex-col items-center justify-center gap-2 pb-1">
+        <div className="relative group">
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-300 bg-slate-100 text-slate-400">
+            {previewUrl ? (
+              <Image
+                src={previewUrl}
+                alt="Avatar preview"
+                width={80}
+                height={80}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <User className="h-10 w-10 text-slate-400" />
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white shadow hover:bg-slate-800"
+            title="Upload photo"
+          >
+            <Camera className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          name="image"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs font-semibold text-indigo-700 hover:underline"
+          >
+            {previewUrl ? "Change photo" : "Add profile photo (optional)"}
+          </button>
+          {previewUrl && (
+            <button
+              type="button"
+              onClick={handleClearImage}
+              className="text-xs text-rose-600 hover:underline flex items-center gap-0.5"
+            >
+              <X className="h-3 w-3" /> Remove
+            </button>
+          )}
+        </div>
+      </div>
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Full name</label>

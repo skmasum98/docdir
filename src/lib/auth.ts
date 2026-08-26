@@ -18,9 +18,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const normalizedEmail = credentials.email.trim().toLowerCase();
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email,
+            email: normalizedEmail,
           },
         });
 
@@ -38,6 +39,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          image: user.image,
         };
       },
     }),
@@ -45,10 +47,40 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
   pages: {
     signIn: "/login",
+  },
+
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      },
+    },
   },
 
   callbacks: {
@@ -56,6 +88,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.image = (user as any).image;
       }
 
       return token;
@@ -65,6 +98,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        session.user.image = (token.image as string) ?? null;
       }
 
       return session;

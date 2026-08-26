@@ -1,75 +1,113 @@
 import Link from "next/link";
 import { prisma, Prisma } from "@/lib/prisma";
 import { DoctorStatus } from "@/lib/enums";
+import { UserAvatar } from "@/components/user-avatar";
 
 export const metadata = { title: "Search | Doctor Directory" };
 
 type Props = {
   searchParams: Promise<{
-    q?: string;
-    division?: string;
-    district?: string;
-    upazila?: string;
-    specialty?: string;
-    facility?: string;
-    gender?: string;
-    verified?: string;
-    minFee?: string;
-    maxFee?: string;
-    page?: string;
+    q?: string | string[];
+    division?: string | string[];
+    district?: string | string[];
+    upazila?: string | string[];
+    specialty?: string | string[];
+    facility?: string | string[];
+    gender?: string | string[];
+    verified?: string | string[];
+    minFee?: string | string[];
+    maxFee?: string | string[];
+    page?: string | string[];
   }>;
 };
 
 const PAGE_SIZE = 12;
 
+function getParam(val: string | string[] | undefined): string | undefined {
+  if (!val) return undefined;
+  if (Array.isArray(val)) {
+    const last = val[val.length - 1];
+    return last ? last.trim() || undefined : undefined;
+  }
+  const trimmed = val.trim();
+  return trimmed || undefined;
+}
+
 export default async function SearchPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const page = Math.max(1, Number(sp.page ?? "1") || 1);
+
+  const q = getParam(sp.q);
+  const divisionSlug = getParam(sp.division);
+  const districtSlug = getParam(sp.district);
+  const upazilaSlug = getParam(sp.upazila);
+  const specialtySlug = getParam(sp.specialty);
+  const facilitySlug = getParam(sp.facility);
+  const gender = getParam(sp.gender);
+  const verified = getParam(sp.verified);
+  const minFee = getParam(sp.minFee);
+  const maxFee = getParam(sp.maxFee);
+  const page = Math.max(1, Number(getParam(sp.page) ?? "1") || 1);
 
   const doctorWhere: Prisma.DoctorWhereInput = { status: DoctorStatus.PUBLISHED };
 
-  if (sp.q) {
+  if (q) {
     doctorWhere.OR = [
-      { fullName: { contains: sp.q } },
-      { hospitalName: { contains: sp.q } },
-      { chamberAddress: { contains: sp.q } },
-      { about: { contains: sp.q } },
+      { fullName: { contains: q } },
+      { hospitalName: { contains: q } },
+      { chamberAddress: { contains: q } },
+      { about: { contains: q } },
     ];
   }
-  if (sp.gender) {
-    doctorWhere.gender = sp.gender as "MALE" | "FEMALE" | "OTHER";
+  if (gender) {
+    doctorWhere.gender = gender as "MALE" | "FEMALE" | "OTHER";
   }
-  if (sp.verified === "1") {
+  if (verified === "1") {
     doctorWhere.isVerified = true;
   }
-  if (sp.minFee || sp.maxFee) {
+  if (minFee || maxFee) {
     const fee: Prisma.IntNullableFilter = {};
-    if (sp.minFee) fee.gte = Number(sp.minFee);
-    if (sp.maxFee) fee.lte = Number(sp.maxFee);
+    if (minFee && !isNaN(Number(minFee))) fee.gte = Number(minFee);
+    if (maxFee && !isNaN(Number(maxFee))) fee.lte = Number(maxFee);
     doctorWhere.consultationFee = fee;
   }
-  if (sp.specialty) {
-    doctorWhere.specialty = { slug: sp.specialty };
+  if (specialtySlug) {
+    doctorWhere.specialty = { slug: specialtySlug };
   }
-  if (sp.facility) {
-    doctorWhere.doctorFacilities = { some: { facility: { slug: sp.facility } } };
+
+  const facilityWhere: Prisma.FacilityWhereInput = {};
+  if (facilitySlug) {
+    facilityWhere.slug = facilitySlug;
   }
-  if (sp.upazila) {
-    doctorWhere.doctorFacilities = {
-      some: { facility: { upazila: { slug: sp.upazila } } },
+  if (upazilaSlug) {
+    facilityWhere.upazila = {
+      ...(facilityWhere.upazila as object),
+      slug: upazilaSlug,
     };
   }
-  if (sp.district) {
-    doctorWhere.doctorFacilities = {
-      some: { facility: { upazila: { district: { slug: sp.district } } } },
+  if (districtSlug) {
+    facilityWhere.upazila = {
+      ...(facilityWhere.upazila as object),
+      district: {
+        slug: districtSlug,
+      },
     };
   }
-  if (sp.division) {
+  if (divisionSlug) {
+    facilityWhere.upazila = {
+      ...(facilityWhere.upazila as object),
+      district: {
+        ...((facilityWhere.upazila as any)?.district as object),
+        division: {
+          slug: divisionSlug,
+        },
+      },
+    };
+  }
+
+  if (Object.keys(facilityWhere).length > 0) {
     doctorWhere.doctorFacilities = {
       some: {
-        facility: {
-          upazila: { district: { division: { slug: sp.division } } },
-        },
+        facility: facilityWhere,
       },
     };
   }
@@ -100,18 +138,18 @@ export default async function SearchPage({ searchParams }: Props) {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const [districts, upazilas, facilities] = await Promise.all([
-    sp.division
-      ? Promise.resolve(divisions.find((d) => d.slug === sp.division)?.districts ?? [])
+    divisionSlug
+      ? Promise.resolve(divisions.find((d) => d.slug === divisionSlug)?.districts ?? [])
       : Promise.resolve([]),
-    sp.district
+    districtSlug
       ? prisma.upazila.findMany({
-          where: { district: { slug: sp.district } },
+          where: { district: { slug: districtSlug } },
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
-    sp.upazila
+    upazilaSlug
       ? prisma.facility.findMany({
-          where: { upazila: { slug: sp.upazila } },
+          where: { upazila: { slug: upazilaSlug } },
           orderBy: { name: "asc" },
         })
       : Promise.resolve([]),
@@ -119,7 +157,20 @@ export default async function SearchPage({ searchParams }: Props) {
 
   function buildQuery(overrides: Record<string, string | undefined>) {
     const params = new URLSearchParams();
-    const merged = { ...sp, ...overrides };
+    const current: Record<string, string | undefined> = {
+      q,
+      specialty: specialtySlug,
+      division: divisionSlug,
+      district: districtSlug,
+      upazila: upazilaSlug,
+      facility: facilitySlug,
+      gender,
+      verified,
+      minFee,
+      maxFee,
+      page: page > 1 ? String(page) : undefined,
+    };
+    const merged = { ...current, ...overrides };
     for (const [k, v] of Object.entries(merged)) {
       if (v !== undefined && v !== "") params.set(k, String(v));
     }
@@ -138,7 +189,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <label className="mb-1 block text-sm font-medium text-slate-700">Search</label>
           <input
             name="q"
-            defaultValue={sp.q ?? ""}
+            defaultValue={q ?? ""}
             placeholder="Doctor name, hospital, area..."
             className="w-full rounded-2xl border border-slate-300 px-4 py-2 text-sm focus:border-slate-500 focus:outline-none"
           />
@@ -156,7 +207,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <Link
                   href={buildQuery({ specialty: undefined, page: undefined })}
                   className={`block rounded-xl px-3 py-1.5 text-sm ${
-                    !sp.specialty ? "bg-slate-100 font-semibold" : "hover:bg-slate-50"
+                    !specialtySlug ? "bg-slate-100 font-semibold" : "hover:bg-slate-50"
                   }`}
                 >
                   All
@@ -167,7 +218,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <Link
                     href={buildQuery({ specialty: s.slug, page: undefined })}
                     className={`block rounded-xl px-3 py-1.5 text-sm ${
-                      sp.specialty === s.slug
+                      specialtySlug === s.slug
                         ? "bg-slate-100 font-semibold"
                         : "hover:bg-slate-50"
                     }`}
@@ -182,9 +233,8 @@ export default async function SearchPage({ searchParams }: Props) {
           <FilterGroup title="Division">
             <select
               name="division"
-              defaultValue={sp.division ?? ""}
+              defaultValue={divisionSlug ?? ""}
               className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-              onChange={undefined}
               form="search-filters"
             >
               <option value="">All</option>
@@ -203,16 +253,15 @@ export default async function SearchPage({ searchParams }: Props) {
               method="get"
               className="space-y-3 text-sm"
             >
-              {sp.q && <input type="hidden" name="q" value={sp.q} />}
-              {sp.specialty && <input type="hidden" name="specialty" value={sp.specialty} />}
-              {sp.division && <input type="hidden" name="division" value={sp.division} />}
+              {q && <input type="hidden" name="q" value={q} />}
+              {specialtySlug && <input type="hidden" name="specialty" value={specialtySlug} />}
 
               {districts.length > 0 && (
                 <div>
                   <label className="mb-1 block font-medium text-slate-700">District</label>
                   <select
                     name="district"
-                    defaultValue={sp.district ?? ""}
+                    defaultValue={districtSlug ?? ""}
                     className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                   >
                     <option value="">All</option>
@@ -230,7 +279,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <label className="mb-1 block font-medium text-slate-700">Upazila</label>
                   <select
                     name="upazila"
-                    defaultValue={sp.upazila ?? ""}
+                    defaultValue={upazilaSlug ?? ""}
                     className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                   >
                     <option value="">All</option>
@@ -248,7 +297,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   <label className="mb-1 block font-medium text-slate-700">Hospital/Facility</label>
                   <select
                     name="facility"
-                    defaultValue={sp.facility ?? ""}
+                    defaultValue={facilitySlug ?? ""}
                     className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                   >
                     <option value="">All</option>
@@ -265,7 +314,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 <label className="mb-1 block font-medium text-slate-700">Gender</label>
                 <select
                   name="gender"
-                  defaultValue={sp.gender ?? ""}
+                  defaultValue={gender ?? ""}
                   className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                 >
                   <option value="">Any</option>
@@ -282,7 +331,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     name="minFee"
                     type="number"
                     min={0}
-                    defaultValue={sp.minFee ?? ""}
+                    defaultValue={minFee ?? ""}
                     className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                   />
                 </div>
@@ -292,7 +341,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     name="maxFee"
                     type="number"
                     min={0}
-                    defaultValue={sp.maxFee ?? ""}
+                    defaultValue={maxFee ?? ""}
                     className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
                   />
                 </div>
@@ -303,7 +352,7 @@ export default async function SearchPage({ searchParams }: Props) {
                   type="checkbox"
                   name="verified"
                   value="1"
-                  defaultChecked={sp.verified === "1"}
+                  defaultChecked={verified === "1"}
                   className="h-4 w-4"
                 />
                 <span>Verified only</span>
@@ -329,35 +378,54 @@ export default async function SearchPage({ searchParams }: Props) {
                   href={`/doctor/${d.slug}`}
                   className="block rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-semibold text-slate-900">
-                        {d.fullName}
-                        {d.isVerified && (
-                          <span className="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">
-                            ✓ Verified
-                          </span>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <UserAvatar
+                        src={d.profilePhoto}
+                        name={d.fullName}
+                        size="lg"
+                        className="ring-2 ring-slate-100 shadow-xs flex-shrink-0"
+                      />
+                      <div>
+                        <p className="text-lg font-semibold text-slate-900">
+                          {d.fullName}
+                          {d.isVerified && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 font-normal">
+                              ✓ Verified
+                            </span>
+                          )}
+                        </p>
+                        {d.degrees && (
+                          <p className="text-xs font-medium text-indigo-900/90">{d.degrees}</p>
                         )}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        {d.specialty?.name ?? "General"}{" "}
-                        {d.experienceYears !== null && `· ${d.experienceYears} yrs exp.`}
-                      </p>
+                        <p className="text-sm text-slate-600">
+                          {d.designation ? `${d.designation} · ` : ""}
+                          {d.specialty?.name ?? "General practitioner"}{" "}
+                          {d.experienceYears !== null && `· ${d.experienceYears} yrs exp.`}
+                        </p>
+                      </div>
                     </div>
                     {d.consultationFee !== null && (
-                      <span className="rounded-2xl border border-slate-200 px-3 py-1 text-sm font-semibold">
+                      <span className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold flex-shrink-0">
                         ৳{d.consultationFee}
                       </span>
                     )}
                   </div>
-                  {d.hospitalName && (
-                    <p className="mt-2 text-sm text-slate-600">
-                      <span className="font-medium">{d.hospitalName}</span>
-                      {d.chamberAddress && ` · ${d.chamberAddress}`}
-                    </p>
+                  {(d.hospitalName || d.chamberAddress || d.visitingHours) && (
+                    <div className="mt-3 text-xs text-slate-600 pl-0 sm:pl-18 space-y-1">
+                      {(d.hospitalName || d.chamberAddress) && (
+                        <p>
+                          <span className="font-semibold text-slate-800">{d.hospitalName}</span>
+                          {d.chamberAddress && ` · ${d.chamberAddress}`}
+                        </p>
+                      )}
+                      {d.visitingHours && (
+                        <p className="text-indigo-700 font-medium">🕒 {d.visitingHours}</p>
+                      )}
+                    </div>
                   )}
                   {d.doctorFacilities.length > 0 && (
-                    <p className="mt-2 flex flex-wrap gap-2">
+                    <p className="mt-2 flex flex-wrap gap-2 pl-0 sm:pl-20">
                       {d.doctorFacilities.map((df) => (
                         <span
                           key={df.id}

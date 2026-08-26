@@ -1,6 +1,6 @@
 {
   "name": "Doctor Directory",
-  "description": "Find verified doctors, hospitals and specialties near you.",
+  "description": "Find verified doctors, hospitals, diagnostic test catalogs with pricing, and clinics across Bangladesh.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

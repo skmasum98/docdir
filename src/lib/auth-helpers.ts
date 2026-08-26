@@ -30,3 +30,8 @@ export async function requireAdmin(): Promise<Session> {
 export async function requireDoctor(): Promise<Session> {
   return requireRole([UserRole.ADMIN, UserRole.DOCTOR]);
 }
+
+export async function requireFacilityManager(): Promise<Session> {
+  return requireRole([UserRole.ADMIN, UserRole.FACILITY_ADMIN]);
+}
+

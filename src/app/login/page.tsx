@@ -5,7 +5,12 @@ import { auth } from "@/lib/auth";
 export const metadata = { title: "Login | Doctor Directory" };
 
 type Props = {
-  searchParams: Promise<{ registered?: string; callbackUrl?: string; error?: string }>;
+  searchParams: Promise<{
+    registered?: string;
+    callbackUrl?: string;
+    error?: string;
+    resetSuccess?: string;
+  }>;
 };
 
 export default async function LoginPage({ searchParams }: Props) {
@@ -22,6 +27,7 @@ export default async function LoginPage({ searchParams }: Props) {
           <LoginForm
             registered={sp.registered === "1"}
             callbackUrl={sp.callbackUrl}
+            resetSuccess={sp.resetSuccess === "1"}
           />
         </div>
       </div>

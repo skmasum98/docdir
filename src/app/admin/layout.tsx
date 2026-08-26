@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth-helpers";
 const navItems = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/doctors", label: "Doctors" },
+  { href: "/admin/doctors/import", label: "⚡ Bulk Import" },
   { href: "/admin/specialties", label: "Specialties" },
   { href: "/admin/facilities", label: "Facilities" },
   { href: "/admin/regions", label: "Regions" },
