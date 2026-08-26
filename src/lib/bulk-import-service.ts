@@ -53,7 +53,7 @@ function cleanName(name: string): string {
 
 export class BulkImportService {
   /**
-   * Process a chunk of doctor rows with in-memory caching to minimize database query overhead
+   * Process a chunk of doctor rows with in-memory caching and batch lookups to minimize database query overhead
    */
   static async importBatch(
     rows: BulkDoctorRow[],
@@ -87,18 +87,15 @@ export class BulkImportService {
     }
 
     try {
-      // 1. Preload Geographies, Specialties, and Facilities into in-memory maps
-      const [divisions, districts, upazilas, specialties, facilities] = await Promise.all([
+      // 1. Preload Geographies & Specialties (small tables, <1000 records total)
+      const [divisions, districts, upazilas, specialties] = await Promise.all([
         prisma.division.findMany({ select: { id: true, name: true, slug: true } }),
         prisma.district.findMany({ select: { id: true, name: true, slug: true, divisionId: true } }),
         prisma.upazila.findMany({ select: { id: true, name: true, slug: true, districtId: true } }),
         prisma.specialty.findMany({ select: { id: true, name: true, slug: true } }),
-        prisma.facility.findMany({
-          select: { id: true, name: true, slug: true, upazilaId: true, phone: true, hotline: true },
-        }),
       ]);
 
-      // Cache Maps
+      // Cache Maps for Geographies & Specialties
       const divisionMap = new Map<string, { id: number; name: string; slug: string }>();
       for (const d of divisions) {
         divisionMap.set(norm(d.name), d);
@@ -123,15 +120,6 @@ export class BulkImportService {
         specialtyMap.set(norm(s.slug), s);
       }
 
-      const facilityMap = new Map<
-        string,
-        { id: number; name: string; slug: string; upazilaId: number; phone: string | null; hotline: string | null }
-      >();
-      for (const f of facilities) {
-        facilityMap.set(norm(f.name), f);
-        facilityMap.set(norm(f.slug), f);
-      }
-
       // Default fallback division & district (Dhaka)
       let defaultDivision = divisionMap.get("dhaka") || divisionMap.get("dhaka division");
       if (!defaultDivision && options.createMissingLocations) {
@@ -153,7 +141,100 @@ export class BulkImportService {
         districtMap.set("dhaka district", created);
       }
 
-      // 2. Process each row sequentially within the chunk for integrity
+      // 2. Extract batch entity names to fetch existing facilities and doctors in targeted bulk queries
+      const rawInstitutesInBatch = Array.from(
+        new Set(rows.map((r) => r.institute?.trim()).filter(Boolean) as string[])
+      );
+      const bmdcListInBatch = Array.from(
+        new Set(rows.map((r) => r.bmdcNumber?.trim()).filter(Boolean) as string[])
+      );
+      const docNamesInBatch = Array.from(
+        new Set(rows.map((r) => cleanName(r.fullName || "")).filter(Boolean))
+      );
+
+      // Targeted lookup for facilities referenced in this batch
+      const existingFacilities = rawInstitutesInBatch.length > 0
+        ? await prisma.facility.findMany({
+            where: {
+              OR: [
+                { name: { in: rawInstitutesInBatch } },
+                { slug: { in: rawInstitutesInBatch.map((inst) => slugify(inst)) } },
+              ],
+            },
+            select: { id: true, name: true, slug: true, upazilaId: true, phone: true, hotline: true },
+          })
+        : [];
+
+      const facilityMap = new Map<
+        string,
+        { id: number; name: string; slug: string; upazilaId: number; phone: string | null; hotline: string | null }
+      >();
+      for (const f of existingFacilities) {
+        facilityMap.set(norm(f.name), f);
+        facilityMap.set(norm(f.slug), f);
+      }
+
+      // Targeted bulk lookup for existing doctors in this batch
+      const doctorFilterOr: any[] = [];
+      if (bmdcListInBatch.length > 0) {
+        doctorFilterOr.push({ bmdcNumber: { in: bmdcListInBatch } });
+      }
+      if (docNamesInBatch.length > 0) {
+        doctorFilterOr.push({ fullName: { in: docNamesInBatch } });
+      }
+
+      const existingDoctorsInBatch = doctorFilterOr.length > 0
+        ? await prisma.doctor.findMany({
+            where: { OR: doctorFilterOr },
+            select: {
+              id: true,
+              fullName: true,
+              slug: true,
+              bmdcNumber: true,
+              specialtyId: true,
+              degrees: true,
+              hospitalName: true,
+              chamberAddress: true,
+              area: true,
+              city: true,
+              phone: true,
+              appointmentPhone: true,
+              email: true,
+              consultationFee: true,
+            },
+          })
+        : [];
+
+      const doctorByBmdc = new Map<string, typeof existingDoctorsInBatch[0]>();
+      const doctorByNameAndSpec = new Map<string, typeof existingDoctorsInBatch[0]>();
+      const doctorByNameOnly = new Map<string, typeof existingDoctorsInBatch[0]>();
+
+      for (const doc of existingDoctorsInBatch) {
+        if (doc.bmdcNumber) {
+          doctorByBmdc.set(norm(doc.bmdcNumber), doc);
+        }
+        const nameKey = norm(cleanName(doc.fullName));
+        doctorByNameAndSpec.set(`${nameKey}::${doc.specialtyId || 0}`, doc);
+        if (!doctorByNameOnly.has(nameKey)) {
+          doctorByNameOnly.set(nameKey, doc);
+        }
+      }
+
+      // Pre-fetch DoctorFacility associations for existing doctors
+      const existingDocIds = existingDoctorsInBatch.map((d) => d.id);
+      const existingDocFacLinks = existingDocIds.length > 0
+        ? await prisma.doctorFacility.findMany({
+            where: { doctorId: { in: existingDocIds } },
+            select: { doctorId: true, facilityId: true },
+          })
+        : [];
+
+      const docFacilityLinkSet = new Set<string>();
+      for (const link of existingDocFacLinks) {
+        docFacilityLinkSet.add(`${link.doctorId}_${link.facilityId}`);
+      }
+
+      // 3. Process each row sequentially with cached resolution
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const currentRowNum = startRowIndex + i;
@@ -177,21 +258,13 @@ export class BulkImportService {
             let matchedSpec = specialtyMap.get(specKey);
 
             if (!matchedSpec && options.createMissingSpecialties) {
-              const specSlug = slugify(rawSpecialty) || `spec-${Date.now()}`;
-              // Double check DB in case created in current batch
-              const existingInDb = await prisma.specialty.findFirst({
-                where: { OR: [{ name: rawSpecialty }, { slug: specSlug }] },
+              const specSlug = slugify(rawSpecialty) || `spec-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+              matchedSpec = await prisma.specialty.create({
+                data: {
+                  name: rawSpecialty,
+                  slug: specSlug,
+                },
               });
-              if (existingInDb) {
-                matchedSpec = existingInDb;
-              } else {
-                matchedSpec = await prisma.specialty.create({
-                  data: {
-                    name: rawSpecialty,
-                    slug: specSlug,
-                  },
-                });
-              }
               specialtyMap.set(specKey, matchedSpec);
               specialtyMap.set(norm(matchedSpec.slug), matchedSpec);
             }
@@ -213,7 +286,7 @@ export class BulkImportService {
             if (foundDist) {
               targetDistrict = foundDist;
             } else if (options.createMissingLocations && defaultDivision) {
-              const distSlug = slugify(rawDistrict) || `dist-${Date.now()}`;
+              const distSlug = slugify(rawDistrict) || `dist-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
               const createdDist = await prisma.district.create({
                 data: {
                   name: rawDistrict.includes("District") ? rawDistrict : `${rawDistrict} District`,
@@ -229,24 +302,18 @@ export class BulkImportService {
 
           if (rawUpazila && targetDistrict) {
             const upKey = norm(rawUpazila);
-            let matchedUp = upazilaMap.get(upKey) || upazilaMap.get(`${upKey} thana`) || upazilaMap.get(`${upKey} upazila`);
+            let matchedUp =
+              upazilaMap.get(upKey) || upazilaMap.get(`${upKey} thana`) || upazilaMap.get(`${upKey} upazila`);
 
             if (!matchedUp && options.createMissingLocations) {
-              const upSlug = slugify(rawUpazila) || `up-${Date.now()}`;
-              const existingUp = await prisma.upazila.findFirst({
-                where: { OR: [{ name: rawUpazila }, { slug: upSlug }] },
+              const upSlug = slugify(rawUpazila) || `up-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+              matchedUp = await prisma.upazila.create({
+                data: {
+                  name: rawUpazila,
+                  slug: upSlug,
+                  districtId: targetDistrict.id,
+                },
               });
-              if (existingUp) {
-                matchedUp = existingUp;
-              } else {
-                matchedUp = await prisma.upazila.create({
-                  data: {
-                    name: rawUpazila,
-                    slug: upSlug,
-                    districtId: targetDistrict.id,
-                  },
-                });
-              }
               upazilaMap.set(upKey, matchedUp);
               upazilaMap.set(norm(matchedUp.slug), matchedUp);
             }
@@ -256,7 +323,7 @@ export class BulkImportService {
             }
           }
 
-          // If no upazila was found, use first available upazila or create a generic one
+          // Fallback upazila if none resolved
           if (!upazilaId && targetDistrict && options.createMissingLocations) {
             const fallbackKey = "central";
             let fallbackUp = upazilaMap.get(fallbackKey);
@@ -285,59 +352,44 @@ export class BulkImportService {
             let matchedFac = facilityMap.get(instKey);
 
             if (!matchedFac && options.createMissingFacilities) {
-              const facSlug = slugify(rawInstitute) || `fac-${Date.now()}`;
-              const existingFac = await prisma.facility.findFirst({
-                where: { OR: [{ name: rawInstitute }, { slug: facSlug }] },
-              });
-
-              if (existingFac) {
-                matchedFac = existingFac;
-                if (rawPhone && (!existingFac.phone || !existingFac.hotline)) {
-                  await prisma.facility.update({
-                    where: { id: existingFac.id },
-                    data: {
-                      phone: existingFac.phone || rawPhone,
-                      hotline: existingFac.hotline || rawPhone,
-                    },
-                  });
-                }
-              } else {
-                // Determine facility type from name
-                let fType: FacilityType = FacilityType.HOSPITAL;
-                const lowerInst = rawInstitute.toLowerCase();
-                if (lowerInst.includes("diagnostic") || lowerInst.includes("lab") || lowerInst.includes("imaging")) {
-                  fType = FacilityType.DIAGNOSTIC;
-                } else if (lowerInst.includes("consultation") || lowerInst.includes("chamber")) {
-                  fType = FacilityType.CHAMBER;
-                } else if (lowerInst.includes("clinic") || lowerInst.includes("center") || lowerInst.includes("centre")) {
-                  fType = FacilityType.CLINIC;
-                }
-
-                matchedFac = await prisma.facility.create({
-                  data: {
-                    name: rawInstitute,
-                    slug: facSlug,
-                    type: fType,
-                    address: row.address?.trim() || null,
-                    phone: rawPhone,
-                    hotline: rawPhone,
-                    upazilaId,
-                  },
-                });
+              const facSlug = slugify(rawInstitute) || `fac-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+              let fType: FacilityType = FacilityType.HOSPITAL;
+              const lowerInst = rawInstitute.toLowerCase();
+              if (lowerInst.includes("diagnostic") || lowerInst.includes("lab") || lowerInst.includes("imaging")) {
+                fType = FacilityType.DIAGNOSTIC;
+              } else if (lowerInst.includes("consultation") || lowerInst.includes("chamber")) {
+                fType = FacilityType.CHAMBER;
+              } else if (lowerInst.includes("clinic") || lowerInst.includes("center") || lowerInst.includes("centre")) {
+                fType = FacilityType.CLINIC;
               }
+
+              matchedFac = await prisma.facility.create({
+                data: {
+                  name: rawInstitute,
+                  slug: facSlug,
+                  type: fType,
+                  address: row.address?.trim() || null,
+                  phone: rawPhone,
+                  hotline: rawPhone,
+                  upazilaId,
+                },
+              });
 
               facilityMap.set(instKey, matchedFac);
               facilityMap.set(norm(matchedFac.slug), matchedFac);
             } else if (matchedFac && rawPhone) {
-              // Update facility phone if not set
-              if (!matchedFac.phone || !(matchedFac as any).hotline) {
-                await prisma.facility.update({
-                  where: { id: matchedFac.id },
-                  data: {
-                    phone: matchedFac.phone || rawPhone,
-                    hotline: (matchedFac as any).hotline || rawPhone,
-                  },
-                }).catch(() => {});
+              if (!matchedFac.phone || !matchedFac.hotline) {
+                await prisma.facility
+                  .update({
+                    where: { id: matchedFac.id },
+                    data: {
+                      phone: matchedFac.phone || rawPhone,
+                      hotline: matchedFac.hotline || rawPhone,
+                    },
+                  })
+                  .catch(() => {});
+                matchedFac.phone = matchedFac.phone || rawPhone;
+                matchedFac.hotline = matchedFac.hotline || rawPhone;
               }
             }
 
@@ -346,44 +398,32 @@ export class BulkImportService {
             }
           }
 
-          // D. Check for Existing Doctor by (BMDC Number) or (FullName + degrees/specialty)
-          let existingDoctor = null;
+          // D. Fast in-memory check for existing doctor
+          let existingDoctor: any = null;
           const bmdc = row.bmdcNumber?.trim() || null;
           if (bmdc) {
-            existingDoctor = await prisma.doctor.findUnique({
-              where: { bmdcNumber: bmdc },
-            });
+            existingDoctor = doctorByBmdc.get(norm(bmdc));
           }
-
           if (!existingDoctor) {
-            // Find by matching full name and specialty
-            existingDoctor = await prisma.doctor.findFirst({
-              where: {
-                fullName: rawName,
-                ...(specialtyId ? { specialtyId } : {}),
-              },
-            });
+            const nameNorm = norm(rawName);
+            existingDoctor =
+              doctorByNameAndSpec.get(`${nameNorm}::${specialtyId || 0}`) ||
+              doctorByNameOnly.get(nameNorm);
           }
 
           // E. Insert or Update
           if (existingDoctor) {
             if (options.duplicateAction === "skip") {
               skipped++;
-              // Still ensure DoctorFacility association exists if facility was resolved
+              // Ensure DoctorFacility association exists if facility was resolved
               if (facilityId) {
-                await prisma.doctorFacility.upsert({
-                  where: {
-                    doctorId_facilityId: {
-                      doctorId: existingDoctor.id,
-                      facilityId,
-                    },
-                  },
-                  update: {},
-                  create: {
-                    doctorId: existingDoctor.id,
-                    facilityId,
-                  },
-                });
+                const linkKey = `${existingDoctor.id}_${facilityId}`;
+                if (!docFacilityLinkSet.has(linkKey)) {
+                  await prisma.doctorFacility.create({
+                    data: { doctorId: existingDoctor.id, facilityId },
+                  }).catch(() => {});
+                  docFacilityLinkSet.add(linkKey);
+                }
               }
               continue;
             } else {
@@ -408,35 +448,22 @@ export class BulkImportService {
               });
 
               if (facilityId) {
-                await prisma.doctorFacility.upsert({
-                  where: {
-                    doctorId_facilityId: {
-                      doctorId: existingDoctor.id,
-                      facilityId,
-                    },
-                  },
-                  update: {},
-                  create: {
-                    doctorId: existingDoctor.id,
-                    facilityId,
-                  },
-                });
+                const linkKey = `${existingDoctor.id}_${facilityId}`;
+                if (!docFacilityLinkSet.has(linkKey)) {
+                  await prisma.doctorFacility.create({
+                    data: { doctorId: existingDoctor.id, facilityId },
+                  }).catch(() => {});
+                  docFacilityLinkSet.add(linkKey);
+                }
               }
               updated++;
             }
           } else {
-            // Create New Doctor with deterministic unique slug
+            // Create New Doctor with unique deterministic slug
             const baseSlug = slugify(`dr-${rawName}`);
             const areaSlug = row.upazila ? `-${slugify(row.upazila)}` : "";
-            let candidateSlug = `${baseSlug}${areaSlug}`;
-
-            // Ensure unique slug
-            const slugExists = await prisma.doctor.findUnique({
-              where: { slug: candidateSlug },
-            });
-            if (slugExists) {
-              candidateSlug = `${baseSlug}${areaSlug}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`;
-            }
+            const uniqueSuffix = `${Date.now().toString(36).slice(-4)}${Math.random().toString(36).substring(2, 6)}`;
+            const candidateSlug = `${baseSlug}${areaSlug}-${uniqueSuffix}`;
 
             const newDoc = await prisma.doctor.create({
               data: {
@@ -463,14 +490,24 @@ export class BulkImportService {
               },
             });
 
+            // Update in-memory doctor index for subsequent duplicate matches in this batch
+            if (bmdc) {
+              doctorByBmdc.set(norm(bmdc), newDoc as any);
+            }
+            const nameNorm = norm(rawName);
+            doctorByNameAndSpec.set(`${nameNorm}::${specialtyId || 0}`, newDoc as any);
+            doctorByNameOnly.set(nameNorm, newDoc as any);
+
             // Connect facility
             if (facilityId) {
+              const linkKey = `${newDoc.id}_${facilityId}`;
               await prisma.doctorFacility.create({
                 data: {
                   doctorId: newDoc.id,
                   facilityId,
                 },
-              });
+              }).catch(() => {});
+              docFacilityLinkSet.add(linkKey);
             }
 
             inserted++;

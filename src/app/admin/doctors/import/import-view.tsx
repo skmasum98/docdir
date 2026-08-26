@@ -96,7 +96,7 @@ export function DoctorBulkImporterView() {
     createMissingFacilities: true,
     createMissingLocations: true,
   });
-  const [chunkSize, setChunkSize] = useState<number>(250);
+  const [chunkSize, setChunkSize] = useState<number>(25);
 
   // Ingestion State
   const [isIngesting, setIsIngesting] = useState(false);
@@ -319,6 +319,95 @@ export function DoctorBulkImporterView() {
     };
   }
 
+  // Helper to send batches with automatic retry for Netlify / Serverless timeouts
+  async function sendBatchWithRetry(
+    rows: BulkDoctorRow[],
+    currentOptions: BulkImportOptions,
+    startRowIndex: number,
+    maxRetries = 2
+  ): Promise<{
+    inserted: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+    errors: Array<{ rowNumber: number; doctorName?: string; error: string }>;
+  }> {
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+      try {
+        const res = await fetch("/api/admin/doctors/bulk-import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rows,
+            options: currentOptions,
+            startRowIndex,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          return {
+            inserted: data.inserted || 0,
+            updated: data.updated || 0,
+            skipped: data.skipped || 0,
+            failed: data.failed || 0,
+            errors: data.errors || [],
+          };
+        }
+
+        // Check if retryable status code (504, 502, 503, 500)
+        if (res.status === 504 || res.status === 502 || res.status === 503 || res.status === 500) {
+          attempt++;
+          if (attempt <= maxRetries) {
+            await new Promise((r) => setTimeout(r, 1000 * attempt));
+            continue;
+          }
+        }
+
+        const errJson = await res.json().catch(() => ({}));
+        return {
+          inserted: 0,
+          updated: 0,
+          skipped: 0,
+          failed: rows.length,
+          errors: [
+            {
+              rowNumber: startRowIndex,
+              error: errJson.error || `HTTP ${res.status} server error`,
+            },
+          ],
+        };
+      } catch (err: any) {
+        attempt++;
+        if (attempt <= maxRetries) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
+          continue;
+        }
+        return {
+          inserted: 0,
+          updated: 0,
+          skipped: 0,
+          failed: rows.length,
+          errors: [
+            {
+              rowNumber: startRowIndex,
+              error: err.message || "Network / timeout error occurred during batch",
+            },
+          ],
+        };
+      }
+    }
+
+    return {
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      failed: rows.length,
+      errors: [{ rowNumber: startRowIndex, error: "Batch failed after retries" }],
+    };
+  }
+
   // Execute Stream Ingestion for Paste Mode or Loaded Memory Rows
   async function startMemoryIngestion() {
     if (!columnMapping.fullName) {
@@ -374,38 +463,16 @@ export function DoctorBulkImporterView() {
       }
 
       if (transformedChunk.length > 0) {
-        try {
-          const res = await fetch("/api/admin/doctors/bulk-import", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              rows: transformedChunk,
-              options,
-              startRowIndex: i + 1,
-            }),
-          });
-
-          if (!res.ok) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.error || `HTTP ${res.status}`);
-          }
-
-          const data = await res.json();
-          localInserted += data.inserted || 0;
-          localUpdated += data.updated || 0;
-          localSkipped += data.skipped || 0;
-          localFailed += data.failed || 0;
-
-          if (data.errors && data.errors.length > 0) {
-            localErrors.push(...data.errors);
-          }
-        } catch (err: any) {
-          localFailed += transformedChunk.length;
-          localErrors.push({
-            rowNumber: i + 1,
-            error: `Batch network failure: ${err.message || "Failed request"}`,
-          });
+        const result = await sendBatchWithRetry(transformedChunk, options, i + 1);
+        localInserted += result.inserted;
+        localUpdated += result.updated;
+        localSkipped += result.skipped;
+        localFailed += result.failed;
+        if (result.errors.length > 0) {
+          localErrors.push(...result.errors);
         }
+        // Small yield to keep network and connection pool calm
+        await new Promise((r) => setTimeout(r, 50));
       }
 
       processed += chunkSlice.length;
@@ -478,37 +545,18 @@ export function DoctorBulkImporterView() {
                 return;
               }
 
-              try {
-                const res = await fetch("/api/admin/doctors/bulk-import", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    rows: currentBatch,
-                    options,
-                    startRowIndex: totalProcessedCount + 1,
-                  }),
-                });
+              const result = await sendBatchWithRetry(
+                currentBatch,
+                options,
+                totalProcessedCount + 1
+              );
 
-                if (res.ok) {
-                  const data = await res.json();
-                  localInserted += data.inserted || 0;
-                  localUpdated += data.updated || 0;
-                  localSkipped += data.skipped || 0;
-                  localFailed += data.failed || 0;
-                  if (data.errors) localErrors.push(...data.errors);
-                } else {
-                  localFailed += currentBatch.length;
-                  localErrors.push({
-                    rowNumber: totalProcessedCount + 1,
-                    error: `Batch HTTP error (${res.status})`,
-                  });
-                }
-              } catch (err: any) {
-                localFailed += currentBatch.length;
-                localErrors.push({
-                  rowNumber: totalProcessedCount + 1,
-                  error: err.message || "Network batch error",
-                });
+              localInserted += result.inserted;
+              localUpdated += result.updated;
+              localSkipped += result.skipped;
+              localFailed += result.failed;
+              if (result.errors.length > 0) {
+                localErrors.push(...result.errors);
               }
 
               totalProcessedCount += currentBatch.length;
@@ -522,6 +570,9 @@ export function DoctorBulkImporterView() {
                 failed: localFailed,
               });
               setErrorsList([...localErrors]);
+
+              // Small yield between batches
+              await new Promise((r) => setTimeout(r, 50));
             }
           }
 
@@ -530,26 +581,17 @@ export function DoctorBulkImporterView() {
         complete: async () => {
           // Process remaining batch
           if (currentBatch.length > 0 && !isCancelledRef.current) {
-            try {
-              const res = await fetch("/api/admin/doctors/bulk-import", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  rows: currentBatch,
-                  options,
-                  startRowIndex: totalProcessedCount + 1,
-                }),
-              });
-              if (res.ok) {
-                const data = await res.json();
-                localInserted += data.inserted || 0;
-                localUpdated += data.updated || 0;
-                localSkipped += data.skipped || 0;
-                localFailed += data.failed || 0;
-                if (data.errors) localErrors.push(...data.errors);
-              }
-            } catch (err: any) {
-              localFailed += currentBatch.length;
+            const result = await sendBatchWithRetry(
+              currentBatch,
+              options,
+              totalProcessedCount + 1
+            );
+            localInserted += result.inserted;
+            localUpdated += result.updated;
+            localSkipped += result.skipped;
+            localFailed += result.failed;
+            if (result.errors.length > 0) {
+              localErrors.push(...result.errors);
             }
             totalProcessedCount += currentBatch.length;
           }
@@ -959,9 +1001,10 @@ export function DoctorBulkImporterView() {
                 onChange={(e) => setChunkSize(Number(e.target.value))}
                 className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs"
               >
-                <option value={100}>100 rows per batch</option>
-                <option value={250}>250 rows per batch (Recommended)</option>
-                <option value={500}>500 rows per batch (High speed)</option>
+                <option value={10}>10 rows (Ultra-Safe / High Latency)</option>
+                <option value={25}>25 rows (Recommended for Netlify / Serverless)</option>
+                <option value={50}>50 rows (Balanced Speed)</option>
+                <option value={100}>100 rows (Fast)</option>
               </select>
             </div>
           </div>
