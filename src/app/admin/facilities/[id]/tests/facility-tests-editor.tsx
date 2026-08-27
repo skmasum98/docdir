@@ -32,7 +32,9 @@ import {
   seedFacilityTestsAction,
   bulkDiscountFacilityTestsAction,
 } from "@/lib/actions/admin";
+import { facilityAddFromCatalogAction } from "@/lib/actions/facility";
 import { initialFormState, fieldError } from "@/lib/form";
+import { CatalogPickerModal } from "@/components/catalog-picker-modal";
 
 export type FacilityTestItem = {
   id: number;
@@ -96,9 +98,14 @@ export function FacilityTestsEditor({ facility, initialTests }: FacilityTestsEdi
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [editingTest, setEditingTest] = useState<FacilityTestItem | null>(null);
   const [showBulkDiscountModal, setShowBulkDiscountModal] = useState(false);
   const [discountPercent, setDiscountPercent] = useState("10");
+
+  const existingCodes = useMemo(() => {
+    return new Set(tests.map((t) => t.code));
+  }, [tests]);
 
   const [createState, createAction, createPending] = useActionState(
     createFacilityTestAction,
@@ -180,11 +187,20 @@ export function FacilityTestsEditor({ facility, initialTests }: FacilityTestsEdi
 
             <button
               type="button"
+              onClick={() => setShowCatalogModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-teal-700 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-800 transition shadow-xs cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>Pick From Master Library & Services</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowAddModal(true)}
               className="inline-flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition shadow-xs cursor-pointer"
             >
               <Plus className="h-4 w-4" />
-              <span>Add Diagnostic Test</span>
+              <span>Custom Manual Entry</span>
             </button>
           </div>
         </div>
@@ -851,6 +867,20 @@ export function FacilityTestsEditor({ facility, initialTests }: FacilityTestsEdi
           </div>
         </div>
       )}
+
+      {/* Pre-built Master Template Library Picker Modal */}
+      <CatalogPickerModal
+        isOpen={showCatalogModal}
+        onClose={() => setShowCatalogModal(false)}
+        facilityId={facility.id}
+        facilityName={facility.name}
+        existingCodes={existingCodes}
+        importAction={facilityAddFromCatalogAction}
+        onImportSuccess={() => {
+          // Re-render / trigger page refresh
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

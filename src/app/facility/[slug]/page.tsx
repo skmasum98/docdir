@@ -238,86 +238,97 @@ export default async function FacilityPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Key Hospital & Diagnostic Services Grid */}
-      {isHospitalOrDiagnostic && (
-        <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm space-y-5">
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="h-5 w-5 text-indigo-600" />
-              Key Clinical Facilities & Services
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Available round-the-clock medical amenities, specialized patient care units, and diagnostics.
-            </p>
+      {/* Key Clinical Facilities & Services (Only shown when configured by admin or facility admin) */}
+      {(() => {
+        const clinicalServiceCategories = new Set([
+          "Emergency & Critical Care",
+          "Specialized Medical Services",
+          "Pediatric & Maternal Care",
+          "Clinical Laboratory & Blood",
+          "Pharmacy & Dispensary",
+          "Rehabilitation & Therapy",
+          "Surgical Suites",
+          "Home Health Care",
+          "Insurance & Billing",
+        ]);
+
+        const activeClinicalServices = facility.tests.filter(
+          (t) =>
+            t.code.startsWith("SERV-") ||
+            clinicalServiceCategories.has(t.category)
+        );
+
+        if (activeClinicalServices.length === 0) return null;
+
+        return (
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm space-y-5">
+            <div className="border-b border-slate-100 pb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Activity className="h-5 w-5 text-teal-700" />
+                Key Clinical Facilities & Services ({activeClinicalServices.length})
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Available medical amenities, specialized patient care units, and emergency services at {facility.name}.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+              {activeClinicalServices.map((serv) => (
+                <div
+                  key={serv.id}
+                  className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 space-y-2 hover:bg-white hover:border-teal-300 transition"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-100/80 text-teal-800 shrink-0">
+                      <Activity className="h-4 w-4" />
+                    </div>
+                    {serv.price > 0 ? (
+                      <div className="text-right">
+                        {serv.discountPrice ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[11px] text-slate-400 line-through">
+                              ৳{serv.price.toLocaleString()}
+                            </span>
+                            <span className="text-xs font-bold text-emerald-800">
+                              ৳{serv.discountPrice.toLocaleString()}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-slate-900">
+                            ৳{serv.price.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                        Facility Unit
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-slate-900">{serv.name}</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">{serv.category}</p>
+                  </div>
+
+                  {serv.description && (
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      {serv.description}
+                    </p>
+                  )}
+
+                  {(serv.deliveryTime || serv.preparation) && (
+                    <div className="text-[10px] text-slate-500 border-t border-slate-200/60 pt-1.5 space-y-0.5">
+                      {serv.deliveryTime && <div>Turnaround: {serv.deliveryTime}</div>}
+                      {serv.preparation && <div className="truncate">Note: {serv.preparation}</div>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 text-xs">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
-                <HeartPulse className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">24/7 Emergency & Trauma</h3>
-              <p className="text-[11px] text-slate-500">Immediate critical care & resuscitation desk</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                <Ambulance className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">24/7 Ambulance Fleet</h3>
-              <p className="text-[11px] text-slate-500">Equipped with Oxygen & ICU transport</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                <FlaskConical className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">Automated Lab Tests</h3>
-              <p className="text-[11px] text-slate-500">High-precision computerized pathology</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <Pill className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">24-Hour Pharmacy</h3>
-              <p className="text-[11px] text-slate-500">Authentic medicine & emergency supplies</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
-                <Syringe className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">Blood Bank Unit</h3>
-              <p className="text-[11px] text-slate-500">Cross-matching & transfusion safety</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">Digital Imaging & USG</h3>
-              <p className="text-[11px] text-slate-500">Digital X-Ray, 4D USG, CT & MRI Scans</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-                <Activity className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">ICU, CCU & NICU</h3>
-              <p className="text-[11px] text-slate-500">Advanced neonatal & adult critical units</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 space-y-1">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                <CreditCard className="h-4 w-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 pt-1">Corporate & Insurance</h3>
-              <p className="text-[11px] text-slate-500">Cashless claims & health card discounts</p>
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Diagnostic & Pathology Test Catalog Section */}
       <FacilityTestCatalog

@@ -29,7 +29,11 @@ import {
   facilityDeleteTestAction,
   facilityLinkDoctorAction,
   facilityUnlinkDoctorAction,
+  facilityAddFromCatalogAction,
+  facilityToggleTestStatusAction,
 } from "@/lib/actions/facility";
+import { CatalogPickerModal } from "@/components/catalog-picker-modal";
+import { Sparkles, Check, Eye, EyeOff } from "lucide-react";
 
 type FacilityData = {
   id: number;
@@ -108,6 +112,7 @@ export default function FacilityManagerView({
 
   // Test modal state
   const [showAddTestModal, setShowAddTestModal] = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [editingTest, setEditingTest] = useState<any | null>(null);
 
   // Doctor link state
@@ -119,6 +124,10 @@ export default function FacilityManagerView({
   );
 
   const currentFacility: FacilityData = facilities[selectedFacilityIndex] || facilities[0];
+
+  const existingTestCodes = new Set(
+    currentFacility.tests.map((t) => t.code)
+  );
 
   const affiliatedDoctorIds = new Set(
     currentFacility.doctorFacilities.map((df) => df.doctor.id)
@@ -186,6 +195,21 @@ export default function FacilityManagerView({
     startTransition(async () => {
       await facilityDeleteTestAction(testId, currentFacility.id);
       setMessage({ type: "success", text: "Test deleted." });
+    });
+  };
+
+  // Handle Toggle Active Status
+  const handleToggleStatus = async (testId: number, currentStatus: boolean) => {
+    startTransition(async () => {
+      const res = await facilityToggleTestStatusAction(testId, currentFacility.id, !currentStatus);
+      if (res.ok) {
+        setMessage({
+          type: "success",
+          text: !currentStatus
+            ? "Service/Test is now active and visible to patients."
+            : "Service/Test deactivated from public view.",
+        });
+      }
     });
   };
 
@@ -443,28 +467,39 @@ export default function FacilityManagerView({
         </form>
       )}
 
-      {/* TAB 2: DIAGNOSTIC TESTS & PRICING */}
+      {/* TAB 2: CLINICAL SERVICES & DIAGNOSTIC TESTS */}
       {activeTab === "tests" && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <FlaskConical className="h-5 w-5 text-teal-700" />
-                Diagnostic & Lab Catalog Management
+                Clinical Services & Diagnostic Tests Management
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Set accurate test fees, turnaround delivery time, preparation instructions, and home collection flags.
+                Manage your facility&apos;s active clinical units (ICU, Dialysis, Ambulance, 24/7 Emergency) and diagnostic pathology test fees.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowAddTestModal(true)}
-              className="flex items-center gap-1.5 rounded-2xl bg-teal-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-teal-800 transition shadow-xs"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add New Test</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCatalogModal(true)}
+                className="flex items-center gap-1.5 rounded-2xl bg-teal-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-teal-800 transition shadow-xs cursor-pointer"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>Pick From Master Library</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAddTestModal(true)}
+                className="flex items-center gap-1.5 rounded-2xl bg-slate-100 border border-slate-300 px-4 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-200 transition cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Custom Test</span>
+              </button>
+            </div>
           </div>
 
           {/* Test Table Card */}
@@ -473,23 +508,36 @@ export default function FacilityManagerView({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="py-3.5 px-4">Test Name & Code</th>
+                    <th className="py-3.5 px-4">Service / Test</th>
                     <th className="py-3.5 px-4">Category</th>
-                    <th className="py-3.5 px-4">Standard Price</th>
-                    <th className="py-3.5 px-4">Discount Price</th>
-                    <th className="py-3.5 px-4">Sample / Report Time</th>
+                    <th className="py-3.5 px-4">Facility Price (৳)</th>
+                    <th className="py-3.5 px-4">Discount (৳)</th>
+                    <th className="py-3.5 px-4">Delivery / Turnaround</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {currentFacility.tests.map((test) => (
-                    <tr key={test.id} className="hover:bg-slate-50/60 transition">
+                    <tr
+                      key={test.id}
+                      className={`hover:bg-slate-50/60 transition ${
+                        !test.isActive ? "opacity-60 bg-slate-50/40" : ""
+                      }`}
+                    >
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{test.name}</div>
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span>{test.name}</span>
+                          {!test.isActive && (
+                            <span className="text-[10px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">
+                              Hidden
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[11px] font-mono text-slate-500">{test.code}</div>
                         {test.homeSampleAvailable && (
                           <span className="inline-block mt-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                            Home Collection
+                            Home Collection Available
                           </span>
                         )}
                       </td>
@@ -511,15 +559,40 @@ export default function FacilityManagerView({
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">
-                        <div>{test.sampleType || "Blood / Urine / Imaging"}</div>
-                        <div className="text-[11px] text-slate-400">{test.deliveryTime || "Same Day"}</div>
+                        <div>{test.sampleType || "Non-Invasive / Lab"}</div>
+                        <div className="text-[11px] text-slate-400">{test.deliveryTime || "Standard"}</div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(test.id, test.isActive)}
+                          disabled={isPending}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${
+                            test.isActive
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                          }`}
+                          title="Click to toggle visibility on public facility page"
+                        >
+                          {test.isActive ? (
+                            <>
+                              <Eye className="h-3 w-3" />
+                              <span>Active</span>
+                            </>
+                          ) : (
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              <span>Inactive</span>
+                            </>
+                          )}
+                        </button>
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-2 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => setEditingTest(test)}
                           className="rounded-xl border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-                          title="Edit Test"
+                          title="Edit Test Pricing"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
@@ -527,7 +600,7 @@ export default function FacilityManagerView({
                           type="button"
                           onClick={() => handleDeleteTest(test.id)}
                           className="rounded-xl border border-rose-200 bg-rose-50 p-1.5 text-rose-700 hover:bg-rose-100 transition"
-                          title="Delete Test"
+                          title="Delete"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -536,8 +609,16 @@ export default function FacilityManagerView({
                   ))}
                   {currentFacility.tests.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-slate-500">
-                        No diagnostic tests configured yet. Click &quot;Add New Test&quot; to populate your catalog.
+                      <td colSpan={7} className="py-12 text-center text-slate-500 space-y-2">
+                        <p>No clinical services or diagnostic tests offered yet.</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowCatalogModal(true)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800 transition"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          <span>Open Master Template Library</span>
+                        </button>
                       </td>
                     </tr>
                   )}
@@ -955,6 +1036,19 @@ export default function FacilityManagerView({
           </div>
         </div>
       )}
+
+      {/* MODAL: PRE-BUILT CLINICAL & DIAGNOSTIC MASTER LIBRARY PICKER */}
+      <CatalogPickerModal
+        isOpen={showCatalogModal}
+        onClose={() => setShowCatalogModal(false)}
+        facilityId={currentFacility.id}
+        facilityName={currentFacility.name}
+        existingCodes={existingTestCodes}
+        importAction={facilityAddFromCatalogAction}
+        onImportSuccess={() => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

@@ -376,3 +376,127 @@ export async function facilityUnlinkDoctorAction(facilityId: number, doctorId: n
   revalidatePath(`/facility/${facility.slug}`);
   revalidatePath("/dashboard/facility");
 }
+
+/**
+ * Bulk Add items from master catalog with custom prices for Facility Admin or Super Admin
+ */
+export async function facilityAddFromCatalogAction(
+  facilityId: number,
+  items: Array<{
+    code: string;
+    name: string;
+    category: string;
+    price: number;
+    discountPrice?: number | null;
+    sampleType?: string | null;
+    deliveryTime?: string | null;
+    preparation?: string | null;
+    homeSampleAvailable?: boolean;
+    description?: string | null;
+    isActive?: boolean;
+  }>
+): Promise<{ ok: boolean; message: string; count?: number }> {
+  const session = await requireSession();
+  const userId = Number(session.user.id);
+  const userRole = session.user.role;
+
+  const facility = await prisma.facility.findUnique({
+    where: { id: facilityId },
+  });
+
+  if (!facility || (userRole !== UserRole.ADMIN && facility.userId !== userId)) {
+    return { ok: false, message: "Unauthorized to manage this facility." };
+  }
+
+  if (!items || items.length === 0) {
+    return { ok: false, message: "No catalog items selected." };
+  }
+
+  const existingCodes = new Set(
+    (
+      await prisma.facilityTest.findMany({
+        where: { facilityId },
+        select: { code: true },
+      })
+    ).map((t) => t.code)
+  );
+
+  let addedCount = 0;
+  for (const item of items) {
+    if (existingCodes.has(item.code)) {
+      // Update existing item's price and active status
+      await prisma.facilityTest.updateMany({
+        where: { facilityId, code: item.code },
+        data: {
+          price: Math.max(0, Number(item.price) || 0),
+          discountPrice: item.discountPrice !== undefined && item.discountPrice !== null ? Number(item.discountPrice) : null,
+          isActive: item.isActive ?? true,
+        },
+      });
+      addedCount++;
+    } else {
+      // Create new
+      await prisma.facilityTest.create({
+        data: {
+          facilityId,
+          code: item.code,
+          name: item.name,
+          category: item.category,
+          price: Math.max(0, Number(item.price) || 0),
+          discountPrice: item.discountPrice !== undefined && item.discountPrice !== null ? Number(item.discountPrice) : null,
+          sampleType: item.sampleType || null,
+          deliveryTime: item.deliveryTime || null,
+          preparation: item.preparation || null,
+          homeSampleAvailable: item.homeSampleAvailable ?? false,
+          description: item.description || null,
+          isActive: item.isActive ?? true,
+        },
+      });
+      addedCount++;
+    }
+  }
+
+  revalidatePath(`/facility/${facility.slug}`);
+  revalidatePath("/dashboard/facility");
+  revalidatePath(`/admin/facilities/${facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+
+  return {
+    ok: true,
+    message: `Successfully configured ${addedCount} services/tests for ${facility.name}!`,
+    count: addedCount,
+  };
+}
+
+/**
+ * Toggle Active / Inactive Status for a test or service
+ */
+export async function facilityToggleTestStatusAction(
+  testId: number,
+  facilityId: number,
+  isActive: boolean
+): Promise<{ ok: boolean }> {
+  const session = await requireSession();
+  const userId = Number(session.user.id);
+  const userRole = session.user.role;
+
+  const facility = await prisma.facility.findUnique({
+    where: { id: facilityId },
+  });
+
+  if (!facility || (userRole !== UserRole.ADMIN && facility.userId !== userId)) {
+    return { ok: false };
+  }
+
+  await prisma.facilityTest.updateMany({
+    where: { id: testId, facilityId },
+    data: { isActive },
+  });
+
+  revalidatePath(`/facility/${facility.slug}`);
+  revalidatePath("/dashboard/facility");
+  revalidatePath(`/admin/facilities/${facilityId}/tests`);
+  revalidatePath("/admin/facilities");
+
+  return { ok: true };
+}

@@ -18,7 +18,7 @@ import {
   ExternalLink,
   ShieldCheck,
 } from "lucide-react";
-import { DEFAULT_DIAGNOSTIC_TESTS, type DiagnosticTest } from "@/lib/diagnostic-tests-data";
+import { type CatalogItemTemplate } from "@/lib/diagnostic-tests-data";
 
 export type TestCatalogItem = {
   id: number | string;
@@ -52,10 +52,7 @@ export function FacilityTestCatalog({
   const [expandedTestId, setExpandedTestId] = useState<string | number | null>(null);
 
   const activeCatalog: TestCatalogItem[] = useMemo(() => {
-    if (tests && tests.length > 0) {
-      return tests;
-    }
-    return DEFAULT_DIAGNOSTIC_TESTS;
+    return tests || [];
   }, [tests]);
 
   const categories = useMemo(() => {
@@ -81,6 +78,10 @@ export function FacilityTestCatalog({
       return matchesCategory && matchesSearch;
     });
   }, [activeCatalog, searchQuery, selectedCategory]);
+
+  if (!tests || tests.length === 0) {
+    return null; // Do not render if facility hasn't added any tests/services
+  }
 
   function getWhatsAppUrl(test: TestCatalogItem) {
     const effectivePrice = test.discountPrice || test.price;

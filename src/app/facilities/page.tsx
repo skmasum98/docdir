@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { FacilitiesDirectoryView, type FacilityListItem, type DivisionOption } from "./facilities-directory-view";
-import { DEFAULT_DIAGNOSTIC_TESTS } from "@/lib/diagnostic-tests-data";
 
 export const metadata: Metadata = {
   title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
@@ -59,17 +58,8 @@ export default async function FacilitiesPage() {
   ]);
 
   const formattedFacilities: FacilityListItem[] = facilities.map((f) => {
-    // If facility has custom tests in DB, use them; otherwise provide the standard preview
-    const activeTests =
-      f.tests.length > 0
-        ? f.tests
-        : DEFAULT_DIAGNOSTIC_TESTS.slice(0, 8).map((t) => ({
-            name: t.name,
-            code: t.code,
-            price: t.price,
-            discountPrice: t.discountPrice || null,
-            category: t.category,
-          }));
+    // Only use custom tests configured in the database
+    const activeTests = f.tests;
 
     const prices = activeTests.map((t) => t.discountPrice || t.price);
     const minPrice = prices.length > 0 ? Math.min(...prices) : null;
@@ -98,7 +88,7 @@ export default async function FacilitiesPage() {
         },
       },
       doctorCount: f._count.doctorFacilities,
-      testCount: f._count.tests > 0 ? f._count.tests : DEFAULT_DIAGNOSTIC_TESTS.length,
+      testCount: f._count.tests,
       minPrice,
       maxPrice,
       testsPreview: activeTests,
@@ -121,16 +111,13 @@ export default async function FacilitiesPage() {
     })),
   }));
 
-  const estimatedTotalTests =
-    totalDbTests > 0 ? totalDbTests : facilities.length * DEFAULT_DIAGNOSTIC_TESTS.length;
-
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
       <FacilitiesDirectoryView
         facilities={formattedFacilities}
         divisions={formattedDivisions}
         totalDoctors={totalDoctors}
-        totalTests={estimatedTotalTests}
+        totalTests={totalDbTests}
       />
     </main>
   );
