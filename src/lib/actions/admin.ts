@@ -165,8 +165,13 @@ export async function createFacilityAction(
   const parsed = facilitySchema.safeParse({
     name: formData.get("name"),
     type: formData.get("type") || undefined,
+    logo: formData.get("logo") || undefined,
     address: formData.get("address") || undefined,
     phone: formData.get("phone") || undefined,
+    hotline: formData.get("hotline") || undefined,
+    email: formData.get("email") || undefined,
+    website: formData.get("website") || undefined,
+    emergencyContact: formData.get("emergencyContact") || undefined,
     upazilaId: formData.get("upazilaId"),
   });
   if (!parsed.success)
@@ -179,8 +184,13 @@ export async function createFacilityAction(
     data: {
       name: parsed.data.name,
       type: parsed.data.type,
+      logo: parsed.data.logo || null,
       address: parsed.data.address || null,
       phone: parsed.data.phone || null,
+      hotline: parsed.data.hotline || null,
+      email: parsed.data.email || null,
+      website: parsed.data.website || null,
+      emergencyContact: parsed.data.emergencyContact || null,
       upazilaId: parsed.data.upazilaId,
       slug,
     },
@@ -202,8 +212,13 @@ export async function updateFacilityAction(
   const parsed = facilityUpdateSchema.safeParse({
     name: formData.get("name") || undefined,
     type: formData.get("type") || undefined,
+    logo: formData.get("logo") !== null ? (formData.get("logo") as string) : undefined,
     address: formData.get("address") || undefined,
     phone: formData.get("phone") || undefined,
+    hotline: formData.get("hotline") || undefined,
+    email: formData.get("email") || undefined,
+    website: formData.get("website") || undefined,
+    emergencyContact: formData.get("emergencyContact") || undefined,
     upazilaId: formData.get("upazilaId") ? Number(formData.get("upazilaId")) : undefined,
   });
 
@@ -214,13 +229,20 @@ export async function updateFacilityAction(
   const existing = await prisma.facility.findUnique({ where: { id } });
   if (!existing) return { ok: false, message: "Facility not found." };
 
+  const removeLogo = formData.get("removeLogo") === "true";
+
   await prisma.facility.update({
     where: { id },
     data: {
       name: parsed.data.name ?? existing.name,
       type: parsed.data.type ?? existing.type,
+      logo: removeLogo ? null : parsed.data.logo !== undefined ? (parsed.data.logo || null) : existing.logo,
       address: parsed.data.address === undefined ? existing.address : parsed.data.address || null,
       phone: parsed.data.phone === undefined ? existing.phone : parsed.data.phone || null,
+      hotline: parsed.data.hotline === undefined ? existing.hotline : parsed.data.hotline || null,
+      email: parsed.data.email === undefined ? existing.email : parsed.data.email || null,
+      website: parsed.data.website === undefined ? existing.website : parsed.data.website || null,
+      emergencyContact: parsed.data.emergencyContact === undefined ? existing.emergencyContact : parsed.data.emergencyContact || null,
       upazilaId: parsed.data.upazilaId ?? existing.upazilaId,
     },
   });

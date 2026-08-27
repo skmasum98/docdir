@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import {
   updateFacilityProfileSelfAction,
+  facilityUpdateLogoAction,
   facilityAddTestAction,
   facilityUpdateTestAction,
   facilityDeleteTestAction,
@@ -33,6 +34,8 @@ import {
   facilityToggleTestStatusAction,
 } from "@/lib/actions/facility";
 import { CatalogPickerModal } from "@/components/catalog-picker-modal";
+import { FacilityLogo } from "@/components/facility-logo";
+import { FacilityLogoUploader } from "@/components/facility-logo-uploader";
 import { Sparkles, Check, Eye, EyeOff } from "lucide-react";
 
 type FacilityData = {
@@ -40,6 +43,7 @@ type FacilityData = {
   name: string;
   slug: string;
   type: string;
+  logo?: string | null;
   phone: string | null;
   hotline: string | null;
   email: string | null;
@@ -235,23 +239,33 @@ export default function FacilityManagerView({
     <div className="space-y-6">
       {/* Header with Switcher and Public Link */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-teal-100 px-2 py-0.5 text-xs font-bold uppercase text-teal-800">
-              {currentFacility.type}
-            </span>
-            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">
-              <ShieldCheck className="h-3.5 w-3.5" /> Verified Management
-            </span>
+        <div className="flex items-center gap-4">
+          <FacilityLogo
+            src={currentFacility.logo}
+            name={currentFacility.name}
+            type={currentFacility.type}
+            size="lg"
+            shape="rounded"
+            className="shadow-2xs"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="rounded-lg bg-teal-100 px-2 py-0.5 text-xs font-bold uppercase text-teal-800">
+                {currentFacility.type}
+              </span>
+              <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">
+                <ShieldCheck className="h-3.5 w-3.5" /> Verified Management
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
+              {currentFacility.name}
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {currentFacility.upazila
+                ? `${currentFacility.upazila.name}${currentFacility.upazila.district?.name ? `, ${currentFacility.upazila.district.name}` : ""}`
+                : currentFacility.address || "Bangladesh"}
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-            {currentFacility.name}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {currentFacility.upazila
-              ? `${currentFacility.upazila.name}${currentFacility.upazila.district?.name ? `, ${currentFacility.upazila.district.name}` : ""}`
-              : currentFacility.address || "Bangladesh"}
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -360,6 +374,16 @@ export default function FacilityManagerView({
               These details are publicly showcased for patients searching for appointments, emergency care, and inquiries.
             </p>
           </div>
+
+          <FacilityLogoUploader
+            currentLogoUrl={currentFacility.logo}
+            facilityId={currentFacility.id}
+            facilityName={currentFacility.name}
+            facilityType={currentFacility.type}
+            saveAction={facilityUpdateLogoAction}
+            label="Institute Official Brand Logo"
+            subLabel="Upload an official logo or symbol badge. Changes are updated immediately on your public profile."
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">

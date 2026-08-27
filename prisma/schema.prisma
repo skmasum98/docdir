@@ -176,6 +176,7 @@ model Facility {
   name             String
   slug             String           @unique
   type             FacilityType     @default(HOSPITAL)
+  logo             String?          @db.Text
   address          String?          @db.Text
   phone            String?
   hotline          String?

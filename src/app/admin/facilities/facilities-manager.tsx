@@ -27,12 +27,15 @@ import {
 import { createFacilityAction, updateFacilityAction, deleteFacilityAction } from "@/lib/actions/admin";
 import { initialFormState, fieldError } from "@/lib/form";
 import { FacilityType } from "@/lib/enums";
+import { FacilityLogo } from "@/components/facility-logo";
+import { FacilityLogoUploader } from "@/components/facility-logo-uploader";
 
 export type FacilityData = {
   id: number;
   name: string;
   slug: string;
   type: string;
+  logo?: string | null;
   address: string | null;
   phone: string | null;
   upazilaId: number;
@@ -275,6 +278,15 @@ export default function FacilitiesManager({
               />
             </div>
 
+            <div className="md:col-span-2 border-t border-slate-200/80 pt-3">
+              <FacilityLogoUploader
+                facilityName="New Facility"
+                facilityType={FacilityType.DIAGNOSTIC}
+                label="Institute / Hospital Logo"
+                subLabel="Upload official brand logo (or provide image URL) for public cards and profile pages."
+              />
+            </div>
+
             <div className="md:col-span-2 flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
@@ -392,6 +404,17 @@ export default function FacilitiesManager({
                   defaultValue={editingFacility.address ?? ""}
                   placeholder="e.g. House #16, Road #2, Dhanmondi, Dhaka-1205"
                   className={inputCls}
+                />
+              </div>
+
+              <div className="md:col-span-2 border-t border-slate-200/80 pt-3">
+                <FacilityLogoUploader
+                  currentLogoUrl={editingFacility.logo}
+                  facilityId={editingFacility.id}
+                  facilityName={editingFacility.name}
+                  facilityType={editingFacility.type}
+                  label="Institute / Hospital Logo"
+                  subLabel="Update official brand logo badge or provide image URL."
                 />
               </div>
 
@@ -533,19 +556,28 @@ export default function FacilitiesManager({
               {filteredFacilities.map((facility) => (
                 <tr key={facility.id} className="hover:bg-slate-50/70 transition">
                   <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
-                        <Link
-                          href={`/facility/${facility.slug}`}
-                          target="_blank"
-                          className="hover:text-indigo-600 transition"
-                          title="Open public page"
-                        >
-                          {facility.name}
-                        </Link>
-                        <ExternalLink className="h-3 w-3 text-slate-400" />
+                    <div className="flex items-center gap-3">
+                      <FacilityLogo
+                        src={facility.logo}
+                        name={facility.name}
+                        type={facility.type}
+                        size="sm"
+                        shape="rounded"
+                      />
+                      <div className="space-y-1">
+                        <div className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
+                          <Link
+                            href={`/facility/${facility.slug}`}
+                            target="_blank"
+                            className="hover:text-indigo-600 transition"
+                            title="Open public page"
+                          >
+                            {facility.name}
+                          </Link>
+                          <ExternalLink className="h-3 w-3 text-slate-400" />
+                        </div>
+                        <div>{renderTypeBadge(facility.type)}</div>
                       </div>
-                      <div>{renderTypeBadge(facility.type)}</div>
                     </div>
                   </td>
 
@@ -647,7 +679,7 @@ export default function FacilitiesManager({
 
               {filteredFacilities.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     <Building2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                     <p className="font-semibold text-slate-800">No facilities found</p>
                     <p className="text-xs text-slate-400 mt-1">

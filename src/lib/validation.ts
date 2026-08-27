@@ -162,6 +162,7 @@ export const reviewDecisionSchema = z.object({
 export const facilitySchema = z.object({
   name: z.string().trim().min(2).max(160),
   type: z.nativeEnum(FacilityType).optional(),
+  logo: z.string().trim().max(1000).optional().or(z.literal("")),
   address: z.string().trim().max(500).optional().or(z.literal("")),
   phone: phoneSchema,
   hotline: phoneSchema,
@@ -176,6 +177,7 @@ export type FacilityInput = z.infer<typeof facilitySchema>;
 
 export const facilitySelfUpdateSchema = z.object({
   name: z.string().trim().min(2).max(160).optional(),
+  logo: z.string().trim().max(1000).optional().or(z.literal("")),
   phone: phoneSchema,
   hotline: phoneSchema,
   email: z.string().trim().email().max(160).optional().or(z.literal("")),

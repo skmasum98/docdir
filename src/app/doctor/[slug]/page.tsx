@@ -7,6 +7,7 @@ import ReviewForm from "./review-form";
 import { UserAvatar } from "@/components/user-avatar";
 import { DoctorShareButton } from "@/components/doctor-share-button";
 import { DoctorClaimBanner } from "@/components/doctor-claim-banner";
+import { FacilityLogo } from "@/components/facility-logo";
 import {
   Stethoscope,
   Clock,
@@ -650,23 +651,33 @@ export default async function DoctorPage({ params }: Props) {
                   {doctor.doctorFacilities.map((df) => (
                     <div
                       key={df.id}
-                      className="rounded-2xl border border-slate-200 p-4 hover:border-indigo-200 transition"
+                      className="flex items-start gap-3.5 rounded-2xl border border-slate-200 p-4 hover:border-indigo-200 transition"
                     >
-                      <Link
-                        href={`/facility/${df.facility.slug}`}
-                        className="font-semibold text-slate-900 hover:text-indigo-700 text-sm flex items-center justify-between"
-                      >
-                        <span>{df.facility.name}</span>
-                        <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-                      </Link>
-                      <p className="mt-1 text-xs text-slate-500 font-medium">
-                        {df.facility.type}
-                        {df.facility.upazila &&
-                          ` · ${df.facility.upazila.name}${df.facility.upazila.district?.name ? `, ${df.facility.upazila.district.name}` : ""}`}
-                      </p>
-                      {df.facility.address && (
-                        <p className="mt-1 text-xs text-slate-600">{df.facility.address}</p>
-                      )}
+                      <FacilityLogo
+                        src={df.facility.logo}
+                        name={df.facility.name}
+                        type={df.facility.type}
+                        size="md"
+                        shape="rounded"
+                        className="shadow-2xs mt-0.5 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          href={`/facility/${df.facility.slug}`}
+                          className="font-semibold text-slate-900 hover:text-indigo-700 text-sm flex items-center justify-between"
+                        >
+                          <span className="truncate">{df.facility.name}</span>
+                          <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        </Link>
+                        <p className="mt-1 text-xs text-slate-500 font-medium">
+                          {df.facility.type}
+                          {df.facility.upazila &&
+                            ` · ${df.facility.upazila.name}${df.facility.upazila.district?.name ? `, ${df.facility.upazila.district.name}` : ""}`}
+                        </p>
+                        {df.facility.address && (
+                          <p className="mt-1 text-xs text-slate-600 truncate">{df.facility.address}</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

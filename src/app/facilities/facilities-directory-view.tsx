@@ -25,12 +25,14 @@ import {
   HeartPulse,
   Ambulance,
 } from "lucide-react";
+import { FacilityLogo } from "@/components/facility-logo";
 
 export type FacilityListItem = {
   id: number;
   name: string;
   slug: string;
   type: string;
+  logo?: string | null;
   address: string | null;
   phone: string | null;
   upazila: {
@@ -520,20 +522,31 @@ export function FacilitiesDirectoryView({
                           </span>
                         </div>
 
-                        {/* Title & Location */}
-                        <div>
-                          <Link
-                            href={`/facility/${facility.slug}`}
-                            className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition"
-                          >
-                            {facility.name}
-                          </Link>
-                          <p className="flex items-center gap-1 text-xs text-slate-500 mt-1">
-                            <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span>
-                              {facility.upazila.name}, {facility.upazila.district.name}
-                            </span>
-                          </p>
+                        {/* Title, Logo & Location */}
+                        <div className="flex items-start gap-3.5">
+                          <FacilityLogo
+                            src={facility.logo}
+                            name={facility.name}
+                            type={facility.type}
+                            size="md"
+                            shape="rounded"
+                            className="shadow-2xs"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <Link
+                              href={`/facility/${facility.slug}`}
+                              className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition block truncate"
+                              title={facility.name}
+                            >
+                              {facility.name}
+                            </Link>
+                            <p className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
+                              <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">
+                                {facility.upazila.name}, {facility.upazila.district.name}
+                              </span>
+                            </p>
+                          </div>
                         </div>
 
                         {facility.address && (

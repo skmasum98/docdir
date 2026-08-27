@@ -70,6 +70,7 @@ export default async function FacilitiesPage() {
       name: f.name,
       slug: f.slug,
       type: f.type,
+      logo: f.logo,
       address: f.address,
       phone: f.phone,
       upazila: {

@@ -126,8 +126,10 @@ export async function updateFacilityProfileSelfAction(
     return { ok: false, message: "You do not have permission to manage this facility." };
   }
 
+  const removeLogo = formData.get("removeLogo") === "true";
   const parsed = facilitySelfUpdateSchema.safeParse({
     name: formData.get("name") || undefined,
+    logo: formData.get("logo") !== null ? (formData.get("logo") as string) : undefined,
     phone: formData.get("phone") || undefined,
     hotline: formData.get("hotline") || undefined,
     email: formData.get("email") || undefined,
@@ -148,6 +150,7 @@ export async function updateFacilityProfileSelfAction(
     where: { id: facilityId },
     data: {
       ...(parsed.data.name ? { name: parsed.data.name } : {}),
+      logo: removeLogo ? null : parsed.data.logo !== undefined ? (parsed.data.logo || null) : facility.logo,
       phone: parsed.data.phone || null,
       hotline: parsed.data.hotline || null,
       email: parsed.data.email || null,
@@ -160,6 +163,46 @@ export async function updateFacilityProfileSelfAction(
   revalidatePath(`/facility/${facility.slug}`);
   revalidatePath("/dashboard/facility");
   return { ok: true, message: "Facility details updated successfully!" };
+}
+
+/**
+ * Dedicated action to update or remove an institute/facility logo
+ */
+export async function facilityUpdateLogoAction(
+  facilityId: number,
+  logoUrl: string | null
+): Promise<{ ok: boolean; message: string; logo?: string | null }> {
+  const session = await requireSession();
+  const userId = Number(session.user.id);
+  const userRole = session.user.role;
+
+  const facility = await prisma.facility.findUnique({
+    where: { id: facilityId },
+  });
+
+  if (!facility) {
+    return { ok: false, message: "Facility not found." };
+  }
+
+  if (userRole !== UserRole.ADMIN && facility.userId !== userId) {
+    return { ok: false, message: "You do not have permission to manage this facility." };
+  }
+
+  await prisma.facility.update({
+    where: { id: facilityId },
+    data: { logo: logoUrl },
+  });
+
+  revalidatePath(`/facility/${facility.slug}`);
+  revalidatePath("/dashboard/facility");
+  revalidatePath("/admin/facilities");
+  revalidatePath("/facilities");
+
+  return {
+    ok: true,
+    message: logoUrl ? "Institute logo updated successfully!" : "Institute logo removed successfully.",
+    logo: logoUrl,
+  };
 }
 
 /**
