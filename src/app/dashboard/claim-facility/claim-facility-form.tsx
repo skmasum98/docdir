@@ -92,7 +92,7 @@ export default function ClaimFacilityForm({
               <h4 className="text-sm font-bold text-slate-900">{selectedFacility.name}</h4>
               <p className="text-xs text-slate-600">
                 {selectedFacility.upazila
-                  ? `${selectedFacility.upazila.name}, ${selectedFacility.upazila.district.name}`
+                  ? `${selectedFacility.upazila.name}${selectedFacility.upazila.district?.name ? `, ${selectedFacility.upazila.district.name}` : ""}`
                   : selectedFacility.address || "Bangladesh"}
               </p>
             </div>
@@ -129,7 +129,7 @@ export default function ClaimFacilityForm({
                   <div>
                     <span className="font-bold text-slate-900 block">{f.name}</span>
                     <span className="text-slate-500">
-                      {f.type} · {f.upazila ? `${f.upazila.name}, ${f.upazila.district.name}` : f.address || "Bangladesh"}
+                      {f.type} · {f.upazila ? `${f.upazila.name}${f.upazila.district?.name ? `, ${f.upazila.district.name}` : ""}` : f.address || "Bangladesh"}
                     </span>
                   </div>
                   <span className="shrink-0 rounded-xl bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">

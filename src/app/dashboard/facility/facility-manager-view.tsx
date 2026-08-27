@@ -225,7 +225,7 @@ export default function FacilityManagerView({
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {currentFacility.upazila
-              ? `${currentFacility.upazila.name}, ${currentFacility.upazila.district.name}`
+              ? `${currentFacility.upazila.name}${currentFacility.upazila.district?.name ? `, ${currentFacility.upazila.district.name}` : ""}`
               : currentFacility.address || "Bangladesh"}
           </p>
         </div>

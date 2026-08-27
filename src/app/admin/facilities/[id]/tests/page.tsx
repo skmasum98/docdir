@@ -41,8 +41,8 @@ export default async function FacilityTestsPage({ params }: FacilityTestsPagePro
     type: facility.type,
     address: facility.address,
     phone: facility.phone,
-    upazilaName: facility.upazila.name,
-    districtName: facility.upazila.district.name,
+    upazilaName: facility.upazila?.name || "Unknown Upazila",
+    districtName: facility.upazila?.district?.name || "Unknown District",
   };
 
   return (

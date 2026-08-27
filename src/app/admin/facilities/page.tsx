@@ -29,9 +29,9 @@ export default async function AdminFacilitiesPage({ searchParams }: Props) {
     address: f.address,
     phone: f.phone,
     upazilaId: f.upazilaId,
-    upazilaName: f.upazila.name,
-    districtName: f.upazila.district.name,
-    divisionName: f.upazila.district.division.name,
+    upazilaName: f.upazila?.name || "Unknown Upazila",
+    districtName: f.upazila?.district?.name || "Unknown District",
+    divisionName: f.upazila?.district?.division?.name || "Unknown Division",
     doctorCount: f._count.doctorFacilities,
     testCount: f._count.tests,
   }));
@@ -39,7 +39,7 @@ export default async function AdminFacilitiesPage({ searchParams }: Props) {
   const formattedUpazilas = upazilas.map((u) => ({
     id: u.id,
     name: u.name,
-    districtName: u.district.name,
+    districtName: u.district?.name || "Unknown District",
   }));
 
   return (

@@ -662,7 +662,7 @@ export default async function DoctorPage({ params }: Props) {
                       <p className="mt-1 text-xs text-slate-500 font-medium">
                         {df.facility.type}
                         {df.facility.upazila &&
-                          ` · ${df.facility.upazila.name}, ${df.facility.upazila.district.name}`}
+                          ` · ${df.facility.upazila.name}${df.facility.upazila.district?.name ? `, ${df.facility.upazila.district.name}` : ""}`}
                       </p>
                       {df.facility.address && (
                         <p className="mt-1 text-xs text-slate-600">{df.facility.address}</p>

@@ -119,7 +119,8 @@ export default async function HomePage() {
                 <p className="flex items-center gap-1 text-xs text-slate-500">
                   <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <span className="truncate">
-                    {f.upazila.name}, {f.upazila.district.name}
+                    {f.upazila?.name || "General"}
+                    {f.upazila?.district?.name ? `, ${f.upazila.district.name}` : ""}
                   </span>
                 </p>
               </div>

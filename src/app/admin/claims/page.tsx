@@ -335,7 +335,8 @@ export default async function AdminClaimsPage({ searchParams }: Props) {
                       <p className="text-xs text-slate-600 flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-slate-400" />
                         <span>
-                          {fc.facility.upazila.name}, {fc.facility.upazila.district.name}
+                          {fc.facility.upazila.name}
+                          {fc.facility.upazila.district?.name ? `, ${fc.facility.upazila.district.name}` : ""}
                         </span>
                       </p>
                     )}
