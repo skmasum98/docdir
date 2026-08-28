@@ -8,7 +8,11 @@ import UserReviews from "./user-reviews";
 import ProfileSection from "./profile-section";
 import { Building2, Stethoscope, ShieldCheck, ChevronRight, FlaskConical, UserCheck } from "lucide-react";
 
-export const metadata = { title: "Dashboard | Doctor Directory" };
+export const metadata = { 
+  title: "Dashboard | Doctor Directory Bangladesh",
+  description: "Manage your medical credentials, hospital facilities, diagnostic test catalogs, and patient reviews.",
+  robots: { index: false, follow: false },
+};
 
 type Props = { searchParams: Promise<{ saved?: string }> };
 
@@ -69,16 +73,16 @@ export default async function DashboardPage({ searchParams }: Props) {
     const specialties = await prisma.specialty.findMany({ orderBy: { name: "asc" } });
 
     return (
-      <main className="mx-auto max-w-4xl px-6 py-10 space-y-8">
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-900">Doctor Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Doctor Dashboard</h1>
           <p className="mt-1 text-sm text-slate-600">
             Manage your medical credentials, visiting schedule, chamber addresses, and patient reviews.
           </p>
         </div>
 
         {saved && (
-          <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="alert">
             Changes saved successfully.
           </div>
         )}
@@ -133,7 +137,7 @@ export default async function DashboardPage({ searchParams }: Props) {
               }))}
             />
           ) : (
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
               <p className="text-sm text-slate-700">
                 No doctor profile is linked to your account yet.{" "}
                 <Link href="/search" className="font-semibold text-slate-900 hover:underline">
@@ -151,17 +155,17 @@ export default async function DashboardPage({ searchParams }: Props) {
   // Facility Admin or User with Managed Facilities
   if (role === UserRole.FACILITY_ADMIN || userFacilities.length > 0) {
     return (
-      <main className="mx-auto max-w-4xl px-6 py-10 space-y-8">
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900">Hospital & Clinic Dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Hospital & Clinic Dashboard</h1>
             <p className="mt-1 text-sm text-slate-600">
               Manage your medical facilities, hotlines, diagnostic test catalogs, and doctor rosters.
             </p>
           </div>
           <Link
             href="/dashboard/facility"
-            className="inline-flex items-center gap-2 rounded-2xl bg-teal-700 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-800 transition shadow-xs shrink-0"
+            className="inline-flex items-center gap-2 rounded-2xl bg-teal-700 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-800 transition shadow-xs shrink-0 self-start sm:self-auto"
           >
             <Building2 className="h-4 w-4" />
             Open Facility Suite
@@ -169,14 +173,14 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
 
         {saved && (
-          <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="alert">
             Changes saved successfully.
           </div>
         )}
 
         {/* Facility Cards */}
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
             <Building2 className="h-5 w-5 text-teal-700" />
             Your Managed Medical Facilities ({userFacilities.length})
           </h2>
@@ -185,7 +189,7 @@ export default async function DashboardPage({ searchParams }: Props) {
             {userFacilities.map((fac) => (
               <div
                 key={fac.id}
-                className="rounded-3xl border border-teal-200 bg-white p-6 shadow-xs space-y-4 flex flex-col justify-between"
+                className="rounded-3xl border border-teal-200 bg-white p-5 sm:p-6 shadow-xs space-y-4 flex flex-col justify-between"
               >
                 <div>
                   <span className="rounded-lg bg-teal-100 px-2 py-0.5 text-[11px] font-bold text-teal-800 uppercase">
@@ -212,6 +216,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                   <Link
                     href={`/facility/${fac.slug}`}
                     target="_blank"
+                    rel="noreferrer"
                     className="text-xs font-semibold text-slate-600 hover:text-slate-900"
                   >
                     View Public
@@ -242,16 +247,16 @@ export default async function DashboardPage({ searchParams }: Props) {
   });
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10 space-y-8">
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold text-slate-900">Your Account</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Your Account</h1>
         <p className="mt-1 text-sm text-slate-600">
           Manage your account profile image, personal info, and review activity.
         </p>
       </div>
 
       {saved && (
-        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="alert">
           Changes saved successfully.
         </div>
       )}
@@ -295,8 +300,8 @@ export default async function DashboardPage({ searchParams }: Props) {
       <ProfileSection user={userData} />
 
       {/* User Reviews */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4">Your Reviews</h2>
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-8 shadow-sm">
+        <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-4">Your Reviews</h2>
         <UserReviews
           reviews={reviews.map((r) => ({
             id: r.id,

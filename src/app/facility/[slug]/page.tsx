@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import {
   Building2,
@@ -33,7 +34,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 const TYPE_CONFIG: Record<
   string,
-  { label: string; bg: string; text: string; border: string; icon: any }
+  { label: string; bg: string; text: string; border: string; icon: any; schemaType: string }
 > = {
   HOSPITAL: {
     label: "Hospital",
@@ -41,6 +42,7 @@ const TYPE_CONFIG: Record<
     text: "text-blue-700",
     border: "border-blue-200",
     icon: Hospital,
+    schemaType: "Hospital",
   },
   DIAGNOSTIC: {
     label: "Diagnostic & Lab Center",
@@ -48,6 +50,7 @@ const TYPE_CONFIG: Record<
     text: "text-teal-700",
     border: "border-teal-200",
     icon: Sparkles,
+    schemaType: "MedicalClinic",
   },
   CLINIC: {
     label: "Specialized Clinic",
@@ -55,6 +58,7 @@ const TYPE_CONFIG: Record<
     text: "text-amber-700",
     border: "border-amber-200",
     icon: Stethoscope,
+    schemaType: "MedicalClinic",
   },
   PHARMACY: {
     label: "Pharmacy & Medicine Store",
@@ -62,6 +66,7 @@ const TYPE_CONFIG: Record<
     text: "text-emerald-700",
     border: "border-emerald-200",
     icon: Pill,
+    schemaType: "Pharmacy",
   },
   CHAMBER: {
     label: "Doctor Chamber",
@@ -69,14 +74,18 @@ const TYPE_CONFIG: Record<
     text: "text-purple-700",
     border: "border-purple-200",
     icon: Home,
+    schemaType: "MedicalClinic",
   },
 };
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const facility = await prisma.facility.findUnique({
     where: { slug },
-    include: { upazila: { include: { district: true } } },
+    include: { 
+      upazila: { include: { district: true } },
+      tests: { where: { isActive: true }, take: 5 },
+    },
   });
   if (!facility) {
     return { title: "Facility Not Found | Doctor Directory" };
@@ -85,9 +94,49 @@ export async function generateMetadata({ params }: Props) {
   const location = [facility.upazila?.name, facility.upazila?.district?.name]
     .filter(Boolean)
     .join(", ");
+  
+  const siteUrl = process.env.NEXTAUTH_URL || "https://doctordirectory.com";
+  const pageUrl = `${siteUrl}/facility/${facility.slug}`;
+  
+  const testNames = facility.tests.map(t => t.name).join(", ");
+  const description = `Diagnostic test pricing list, doctor schedule, emergency numbers, and contact details for ${facility.name} in ${location}. ${facility.tests.length > 0 ? `Tests available: ${testNames}.` : ""} Hotline: ${facility.hotline || facility.phone || "N/A"}.`;
+  
   return {
     title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
-    description: `Diagnostic test pricing list, doctor schedule, emergency numbers, and contact details for ${facility.name} in ${location}.`,
+    description: description.slice(0, 160),
+    keywords: [
+      facility.name,
+      typeName,
+      `${typeName} in ${facility.upazila?.district?.name || "Bangladesh"}`,
+      `${facility.name} ${facility.upazila?.district?.name || ""}`,
+      `${facility.name} doctor list`,
+      `${facility.name} test price`,
+      ...facility.tests.slice(0, 5).map(t => `${t.name} ${facility.name}`),
+    ],
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
+      description: description.slice(0, 160),
+      url: pageUrl,
+      siteName: "Doctor Directory",
+      type: "website",
+      images: facility.logo
+        ? [
+            {
+              url: facility.logo,
+              alt: `${facility.name} Logo`,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
+      description: description.slice(0, 160),
+      images: facility.logo ? [facility.logo] : [],
+    },
   };
 }
 
@@ -118,6 +167,7 @@ export default async function FacilityPage({ params }: Props) {
     text: "text-slate-700",
     border: "border-slate-200",
     icon: Building2,
+    schemaType: "MedicalOrganization",
   };
   const TypeIcon = typeConfig.icon;
 
@@ -129,20 +179,91 @@ export default async function FacilityPage({ params }: Props) {
     .filter(Boolean)
     .join(", ");
 
-  const isHospitalOrDiagnostic =
-    facility.type === "HOSPITAL" ||
-    facility.type === "DIAGNOSTIC" ||
-    facility.type === "CLINIC";
+  const siteUrl = process.env.NEXTAUTH_URL || "https://doctordirectory.com";
+  const pageUrl = `${siteUrl}/facility/${facility.slug}`;
+
+  // Schema.org structured data for the facility
+  const facilitySchema = {
+    "@context": "https://schema.org",
+    "@type": [typeConfig.schemaType, "MedicalBusiness"],
+    name: facility.name,
+    description: `${typeConfig.label} located in ${locationText}.`,
+    url: pageUrl,
+    image: facility.logo || undefined,
+    telephone: facility.phone || facility.hotline || undefined,
+    email: facility.email || undefined,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: facility.address || "",
+      addressLocality: facility.upazila?.name || "",
+      addressRegion: facility.upazila?.district?.name || "",
+      addressCountry: "BD",
+    },
+    priceRange: "৳৳",
+    medicalSpecialty: facility.doctorFacilities
+      .map((df) => df.doctor.specialty?.name)
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 5),
+    hasOfferCatalog: facility.tests.length > 0 ? {
+      "@type": "OfferCatalog",
+      name: `${facility.name} - Diagnostic Tests & Services`,
+      itemListElement: facility.tests.slice(0, 10).map((test) => ({
+        "@type": "Offer",
+        name: test.name,
+        category: test.category,
+        price: test.discountPrice || test.price,
+        priceCurrency: "BDT",
+        availability: "https://schema.org/InStock",
+      })),
+    } : undefined,
+  };
+
+  // BreadcrumbList JSON-LD
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${siteUrl}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Facilities & Centers",
+        item: `${siteUrl}/facilities`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: facility.name,
+        item: pageUrl,
+      },
+    ],
+  };
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-8">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      {/* Schema.org Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(facilitySchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
       {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto whitespace-nowrap">
+      <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto whitespace-nowrap pb-1" aria-label="Breadcrumb">
         <Link href="/" className="hover:text-slate-900 transition">
           Home
         </Link>
         <ChevronRight className="h-3 w-3 text-slate-400" />
-        <Link href="/search" className="hover:text-slate-900 transition">
+        <Link href="/facilities" className="hover:text-slate-900 transition">
           Facilities & Centers
         </Link>
         <ChevronRight className="h-3 w-3 text-slate-400" />
@@ -152,9 +273,9 @@ export default async function FacilityPage({ params }: Props) {
       </nav>
 
       {/* Facility Hero Card */}
-      <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-8 shadow-sm space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-start gap-5 max-w-3xl">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5 max-w-3xl">
             <FacilityLogo
               src={facility.logo}
               name={facility.name}
@@ -173,17 +294,17 @@ export default async function FacilityPage({ params }: Props) {
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                   <UserCheck className="h-3.5 w-3.5" />
-                  {facility.doctorFacilities.length} Practicing Doctors
+                  {facility.doctorFacilities.length} Doctors
                 </span>
                 {facility.isVerified && (
                   <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 border border-emerald-200">
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                    Verified Center
+                    Verified
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
                 {facility.name}
               </h1>
 
@@ -204,7 +325,7 @@ export default async function FacilityPage({ params }: Props) {
           </div>
 
           {/* Action Box */}
-          <div className="flex flex-col gap-3 shrink-0 lg:w-72">
+          <div className="flex flex-col gap-3 shrink-0 lg:w-72 w-full">
             {facility.hotline || facility.phone ? (
               <a
                 href={`tel:${facility.hotline || facility.phone}`}
@@ -223,14 +344,16 @@ export default async function FacilityPage({ params }: Props) {
               </a>
             )}
 
-            <a
-              href={`https://wa.me/8801700000000?text=Hello,%20I%20am%20inquiring%20about%20services%20at%20${encodeURIComponent(facility.name)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-2xs"
-            >
-              <span>Inquire via WhatsApp Desk</span>
-            </a>
+            {facility.phone && (
+              <a
+                href={`https://wa.me/${facility.phone.replace(/[^0-9]/g, "")}?text=Hello,%20I%20am%20inquiring%20about%20services%20at%20${encodeURIComponent(facility.name)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition shadow-2xs"
+              >
+                <span>Inquire via WhatsApp Desk</span>
+              </a>
+            )}
 
             {!facility.profileClaimed ? (
               <Link
@@ -272,7 +395,7 @@ export default async function FacilityPage({ params }: Props) {
         if (activeClinicalServices.length === 0) return null;
 
         return (
-          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm space-y-5">
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-8 shadow-sm space-y-5">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
                 <Activity className="h-5 w-5 text-teal-700" />

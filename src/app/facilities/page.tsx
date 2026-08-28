@@ -6,6 +6,20 @@ export const metadata: Metadata = {
   title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
   description:
     "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh. Compare diagnostic test pricing, find practicing doctors, and 24/7 hotline numbers.",
+  openGraph: {
+    title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
+    description:
+      "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh. Compare diagnostic test pricing, find practicing doctors, and 24/7 hotline numbers.",
+    type: "website",
+    locale: "en_BD",
+    siteName: "Doctor Directory",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
+    description:
+      "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh.",
+  },
 };
 
 export default async function FacilitiesPage() {
@@ -113,7 +127,7 @@ export default async function FacilitiesPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
       <FacilitiesDirectoryView
         facilities={formattedFacilities}
         divisions={formattedDivisions}

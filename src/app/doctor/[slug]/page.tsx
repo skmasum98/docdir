@@ -288,7 +288,7 @@ export default async function DoctorPage({ params }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50/50 pb-16">
+    <main className="min-h-screen bg-slate-50/50 pb-12 sm:pb-16">
       {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
@@ -306,7 +306,7 @@ export default async function DoctorPage({ params }: Props) {
       {/* Navigation Breadcrumb Bar */}
       <div className="border-b border-slate-200/80 bg-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-3">
-          <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto whitespace-nowrap">
+          <nav className="flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto whitespace-nowrap pb-1" aria-label="Breadcrumb">
             <Link href="/" className="hover:text-slate-900 transition">
               Home
             </Link>
@@ -318,7 +318,7 @@ export default async function DoctorPage({ params }: Props) {
               <>
                 <ChevronRight className="h-3 w-3 text-slate-400" />
                 <Link
-                  href={`/search?specialtyId=${doctor.specialty.id}`}
+                  href={`/search?specialty=${doctor.specialty.slug}`}
                   className="hover:text-slate-900 transition"
                 >
                   {doctor.specialty.name}
@@ -333,22 +333,22 @@ export default async function DoctorPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 space-y-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 sm:pt-6 space-y-6">
         {/* Unclaimed Profile Banner with Instructions */}
         {!doctor.profileClaimed && !isOwnProfile && (
           <DoctorClaimBanner doctorId={doctor.id} doctorName={doctor.fullName} />
         )}
 
         {/* Doctor Main Hero Card */}
-        <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+        <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-8 shadow-sm">
           <div className="flex flex-col lg:flex-row items-start justify-between gap-6 sm:gap-8">
-            <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-6 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 w-full lg:w-auto">
               <div className="relative shrink-0">
                 <UserAvatar
                   src={doctor.profilePhoto}
                   name={doctor.fullName}
                   size="xl"
-                  className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl ring-4 ring-slate-100 shadow-md object-cover"
+                  className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl ring-4 ring-slate-100 shadow-md object-cover"
                 />
                 {doctor.isVerified && (
                   <span
@@ -361,9 +361,9 @@ export default async function DoctorPage({ params }: Props) {
                 )}
               </div>
 
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2 flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
                     {doctor.fullName}
                   </h1>
                 </div>
@@ -400,13 +400,13 @@ export default async function DoctorPage({ params }: Props) {
                   {doctor.experienceYears !== null && doctor.experienceYears > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
                       <Award className="h-3.5 w-3.5 text-slate-500" />
-                      {doctor.experienceYears}+ Years Experience
+                      {doctor.experienceYears}+ Years
                     </span>
                   )}
 
                   {doctor.bmdcNumber && (
                     <span className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800">
-                      BMDC Reg: {doctor.bmdcNumber}
+                      BMDC: {doctor.bmdcNumber}
                     </span>
                   )}
                 </div>
@@ -414,13 +414,13 @@ export default async function DoctorPage({ params }: Props) {
                 {/* Star Ratings */}
                 {avgRating !== null ? (
                   <div className="flex items-center gap-2 pt-1 text-sm">
-                    <div className="flex items-center text-amber-500">
+                    <div className="flex items-center text-amber-500" aria-label={`Rated ${avgRating.toFixed(1)} out of 5`}>
                       {"★".repeat(Math.round(avgRating))}
                       {"☆".repeat(5 - Math.round(avgRating))}
                     </div>
                     <span className="font-semibold text-slate-900">{avgRating.toFixed(1)}</span>
                     <span className="text-slate-500">
-                      ({doctor.reviews.length} patient review{doctor.reviews.length === 1 ? "" : "s"})
+                      ({doctor.reviews.length} review{doctor.reviews.length === 1 ? "" : "s"})
                     </span>
                   </div>
                 ) : (
@@ -456,6 +456,7 @@ export default async function DoctorPage({ params }: Props) {
                   <a
                     href={`tel:${cleanPhoneForDial}`}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+                    aria-label={`Call to book appointment: ${appointmentPhone}`}
                   >
                     <Phone className="h-4 w-4" />
                     Book Serial: {appointmentPhone}
@@ -474,7 +475,7 @@ export default async function DoctorPage({ params }: Props) {
                     className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition"
                   >
                     <MessageCircle className="h-4 w-4 text-emerald-600" />
-                    WhatsApp Serial Booking
+                    WhatsApp Booking
                   </a>
                 )}
               </div>
@@ -502,22 +503,22 @@ export default async function DoctorPage({ params }: Props) {
           {/* Main Left Column (2 Cols wide) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Chamber & Schedule Card */}
-            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-5">
+            <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 shrink-0">
                     <Clock className="h-5 w-5" />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">
                       Chamber & Visiting Schedule
                     </h2>
                     <p className="text-xs text-slate-500">Consultation timings and room info</p>
                   </div>
                 </div>
                 {appointmentPhone && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Serial Active
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full shrink-0">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Active
                   </span>
                 )}
               </div>
@@ -588,16 +589,16 @@ export default async function DoctorPage({ params }: Props) {
 
             {/* Conditions Treated & Services Offered */}
             {servicesList.length > 0 && (
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-4">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700 shrink-0">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">
                       Conditions Treated & Medical Services
                     </h2>
-                    <p className="text-xs text-slate-500">Areas of clinical focus and clinical procedures</p>
+                    <p className="text-xs text-slate-500">Areas of clinical focus and procedures</p>
                   </div>
                 </div>
 
@@ -616,13 +617,13 @@ export default async function DoctorPage({ params }: Props) {
 
             {/* About / Clinical Biography */}
             {doctor.about && (
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-3">
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-3">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700 shrink-0">
                     <Award className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">About the Doctor</h2>
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">About the Doctor</h2>
                     <p className="text-xs text-slate-500">Professional background & care philosophy</p>
                   </div>
                 </div>
@@ -634,13 +635,13 @@ export default async function DoctorPage({ params }: Props) {
 
             {/* Affiliated Hospitals & Facilities */}
             {doctor.doctorFacilities.length > 0 && (
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-4">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 shrink-0">
                     <Building2 className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">
                       Practices & Hospital Attachments
                     </h2>
                     <p className="text-xs text-slate-500">Hospitals and diagnostic centers affiliated with this doctor</p>
@@ -664,7 +665,7 @@ export default async function DoctorPage({ params }: Props) {
                       <div className="flex-1 min-w-0">
                         <Link
                           href={`/facility/${df.facility.slug}`}
-                          className="font-semibold text-slate-900 hover:text-indigo-700 text-sm flex items-center justify-between"
+                          className="font-semibold text-slate-900 hover:text-indigo-700 text-sm flex items-center justify-between gap-1"
                         >
                           <span className="truncate">{df.facility.name}</span>
                           <ExternalLink className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -686,13 +687,13 @@ export default async function DoctorPage({ params }: Props) {
 
             {/* Doctor's Published Articles & Health Advice */}
             {doctor.blogs && doctor.blogs.length > 0 && (
-              <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-4">
+              <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-4">
                 <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-700 shrink-0">
                     <BookOpen className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">
                       Health Articles by {doctor.fullName}
                     </h2>
                     <p className="text-xs text-slate-500">Medical advice and health guidance</p>
@@ -724,13 +725,13 @@ export default async function DoctorPage({ params }: Props) {
             )}
 
             {/* Frequently Asked Questions (FAQ Section) for Patients & SEO Rich Snippets */}
-            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-4">
+            <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-4">
               <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700 shrink-0">
                   <HelpCircle className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">
                     Frequently Asked Questions
                   </h2>
                   <p className="text-xs text-slate-500">Common questions about appointments and chamber visits</p>
@@ -743,9 +744,9 @@ export default async function DoctorPage({ params }: Props) {
                     key={idx}
                     className="group rounded-2xl border border-slate-200 bg-slate-50/50 p-4 open:bg-white open:ring-1 open:ring-slate-200 transition"
                   >
-                    <summary className="flex items-center justify-between cursor-pointer font-semibold text-slate-900 text-sm list-none">
+                    <summary className="flex items-center justify-between gap-2 cursor-pointer font-semibold text-slate-900 text-sm list-none">
                       <span>{faq.question}</span>
-                      <span className="text-slate-400 group-open:rotate-180 transition-transform">
+                      <span className="text-slate-400 group-open:rotate-180 transition-transform shrink-0">
                         ▼
                       </span>
                     </summary>
@@ -758,14 +759,14 @@ export default async function DoctorPage({ params }: Props) {
             </section>
 
             {/* Patient Reviews & Feedback */}
-            <section className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-7 shadow-sm space-y-5">
+            <section className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-7 shadow-sm space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Patient Reviews</h2>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Patient Reviews</h2>
                   <p className="text-xs text-slate-500">Verified feedback from consulted patients</p>
                 </div>
                 {avgRating !== null && (
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <span className="text-xl font-bold text-slate-900">{avgRating.toFixed(1)}</span>
                     <span className="text-xs text-slate-500"> / 5.0</span>
                   </div>
@@ -784,16 +785,18 @@ export default async function DoctorPage({ params }: Props) {
                       className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2 shadow-xs"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <UserAvatar src={r.user.image} name={r.user.name} size="sm" />
-                          <p className="text-sm font-semibold text-slate-900">{r.user.name}</p>
+                          <p className="text-sm font-semibold text-slate-900 truncate">{r.user.name}</p>
                         </div>
-                        <div className="text-amber-500 text-sm">{"★".repeat(r.rating)}</div>
+                        <div className="text-amber-500 text-sm shrink-0" aria-label={`${r.rating} stars`}>
+                          {"★".repeat(r.rating)}
+                        </div>
                       </div>
                       {r.comment && (
-                        <p className="text-sm text-slate-700 leading-relaxed pl-8">{r.comment}</p>
+                        <p className="text-sm text-slate-700 leading-relaxed pl-0 sm:pl-10">{r.comment}</p>
                       )}
-                      <p className="text-[11px] text-slate-400 pl-8">
+                      <p className="text-[11px] text-slate-400 pl-0 sm:pl-10">
                         {r.createdAt.toLocaleDateString(undefined, {
                           year: "numeric",
                           month: "short",
@@ -818,7 +821,7 @@ export default async function DoctorPage({ params }: Props) {
           {/* Right Sidebar Details & Credentials Column */}
           <div className="space-y-6">
             {/* Quick Contact & Links */}
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm space-y-4">
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm space-y-4">
               <h3 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-2.5">
                 Contact Details
               </h3>
@@ -885,7 +888,7 @@ export default async function DoctorPage({ params }: Props) {
             </div>
 
             {/* Medical Verification Card */}
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm space-y-3">
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-sm space-y-3">
               <h3 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-2.5">
                 Medical Credentials
               </h3>
@@ -907,7 +910,7 @@ export default async function DoctorPage({ params }: Props) {
                 {doctor.bmdcNumber && (
                   <div>
                     <dt className="text-slate-400 uppercase tracking-wide font-medium">BMDC Number</dt>
-                    <dd className="font-mono text-slate-800 mt-0.5">{doctor.bmdcNumber}</dd>
+                    <dd className="font-mono text-slate-800 mt-0.5 break-all">{doctor.bmdcNumber}</dd>
                   </div>
                 )}
 
@@ -929,7 +932,7 @@ export default async function DoctorPage({ params }: Props) {
 
             {/* Search Related Doctors Helper */}
             {doctor.specialty && (
-              <div className="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-6 space-y-3">
+              <div className="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-5 sm:p-6 space-y-3">
                 <h3 className="text-sm font-semibold text-indigo-950">
                   Looking for more {doctor.specialty.name} specialists?
                 </h3>
@@ -937,7 +940,7 @@ export default async function DoctorPage({ params }: Props) {
                   Browse our directory of verified {doctor.specialty.name.toLowerCase()} specialists across {doctor.city || "Bangladesh"}.
                 </p>
                 <Link
-                  href={`/search?specialtyId=${doctor.specialty.id}${doctor.city ? `&city=${encodeURIComponent(doctor.city)}` : ""}`}
+                  href={`/search?specialty=${doctor.specialty.slug}${doctor.city ? `&q=${encodeURIComponent(doctor.city)}` : ""}`}
                   className="inline-flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition"
                 >
                   View {doctor.specialty.name} Doctors <ChevronRight className="h-3 w-3" />

@@ -2,8 +2,12 @@ import Link from "next/link";
 import { prisma, Prisma } from "@/lib/prisma";
 import { DoctorStatus } from "@/lib/enums";
 import { UserAvatar } from "@/components/user-avatar";
+import { X, Filter, ChevronDown } from "lucide-react";
 
-export const metadata = { title: "Search | Doctor Directory" };
+export const metadata = { 
+  title: "Search Doctors | Doctor Directory Bangladesh",
+  description: "Find verified specialist doctors in Bangladesh. Search by name, specialty, location, hospital, gender, and consultation fee. View chamber addresses, visiting hours, and book appointments.",
+};
 
 type Props = {
   searchParams: Promise<{
@@ -177,192 +181,238 @@ export default async function SearchPage({ searchParams }: Props) {
     return `/search?${params.toString()}`;
   }
 
-  return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="text-3xl font-semibold text-slate-900">Find a doctor</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        {total} doctor{total === 1 ? "" : "s"} found.
-      </p>
+  const hasActiveFilters = q || specialtySlug || divisionSlug || districtSlug || upazilaSlug || facilitySlug || gender || verified === "1" || minFee || maxFee;
 
-      <form className="mt-6 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-end">
-        <div className="flex-1">
+  return (
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Find a doctor</h1>
+        <p className="mt-1 text-sm text-slate-600">
+          {total} doctor{total === 1 ? "" : "s"} found.
+        </p>
+      </div>
+
+      {/* Mobile Search Bar */}
+      <form className="mb-4 md:hidden flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm" role="search">
+        <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Search</label>
           <input
             name="q"
             defaultValue={q ?? ""}
             placeholder="Doctor name, hospital, area..."
-            className="w-full rounded-2xl border border-slate-300 px-4 py-2 text-sm focus:border-slate-500 focus:outline-none"
+            className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm focus:border-slate-500 focus:outline-none"
           />
         </div>
-        <button className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+        <button className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
           Search
         </button>
       </form>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="space-y-6">
-          <FilterGroup title="Specialty">
-            <ul className="space-y-1">
-              <li>
-                <Link
-                  href={buildQuery({ specialty: undefined, page: undefined })}
-                  className={`block rounded-xl px-3 py-1.5 text-sm ${
-                    !specialtySlug ? "bg-slate-100 font-semibold" : "hover:bg-slate-50"
-                  }`}
-                >
-                  All
-                </Link>
-              </li>
-              {specialties.map((s) => (
-                <li key={s.id}>
+      <div className="mt-4 md:mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+        <aside className="space-y-4">
+          {/* Mobile Filter Toggle - CSS only using peer */}
+          <details className="md:hidden w-full rounded-2xl border border-slate-200 bg-white shadow-sm group">
+            <summary className="flex items-center justify-between px-4 py-3 font-semibold text-slate-900 hover:bg-slate-50 transition cursor-pointer list-none">
+              <span className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="rounded-full bg-slate-950 px-2 py-0.5 text-xs text-white">
+                    Active
+                  </span>
+                )}
+              </span>
+              <ChevronDown className="h-5 w-5 text-slate-400 transition-transform group-open:rotate-180" />
+            </summary>
+          </details>
+
+          {/* Filters Panel - Hidden on mobile by default, visible on desktop */}
+          <div className="hidden md:block space-y-4">
+            <FilterGroup title="Specialty">
+              <ul className="space-y-1 max-h-60 overflow-y-auto pr-1">
+                <li>
                   <Link
-                    href={buildQuery({ specialty: s.slug, page: undefined })}
+                    href={buildQuery({ specialty: undefined, page: undefined })}
                     className={`block rounded-xl px-3 py-1.5 text-sm ${
-                      specialtySlug === s.slug
-                        ? "bg-slate-100 font-semibold"
-                        : "hover:bg-slate-50"
+                      !specialtySlug ? "bg-slate-100 font-semibold" : "hover:bg-slate-50"
                     }`}
                   >
-                    {s.name}
+                    All
                   </Link>
                 </li>
-              ))}
-            </ul>
-          </FilterGroup>
+                {specialties.map((s) => (
+                  <li key={s.id}>
+                    <Link
+                      href={buildQuery({ specialty: s.slug, page: undefined })}
+                      className={`block rounded-xl px-3 py-1.5 text-sm ${
+                        specialtySlug === s.slug
+                          ? "bg-slate-100 font-semibold"
+                          : "hover:bg-slate-50"
+                      }`}
+                    >
+                      {s.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </FilterGroup>
 
-          <FilterGroup title="Division">
-            <select
-              name="division"
-              defaultValue={divisionSlug ?? ""}
-              className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-              form="search-filters"
-            >
-              <option value="">All</option>
-              {divisions.map((d) => (
-                <option key={d.id} value={d.slug}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </FilterGroup>
+            <FilterGroup title="Division">
+              <select
+                name="division"
+                defaultValue={divisionSlug ?? ""}
+                className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
+                form="search-filters"
+              >
+                <option value="">All Divisions</option>
+                {divisions.map((d) => (
+                  <option key={d.id} value={d.slug}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </FilterGroup>
 
-          <FilterGroup title="Filters">
-            <form
-              id="search-filters"
-              action="/search"
-              method="get"
-              className="space-y-3 text-sm"
-            >
-              {q && <input type="hidden" name="q" value={q} />}
-              {specialtySlug && <input type="hidden" name="specialty" value={specialtySlug} />}
+            <FilterGroup title="Filters">
+              <form
+                id="search-filters"
+                action="/search"
+                method="get"
+                className="space-y-3 text-sm"
+              >
+                {q && <input type="hidden" name="q" value={q} />}
+                {specialtySlug && <input type="hidden" name="specialty" value={specialtySlug} />}
 
-              {districts.length > 0 && (
+                {districts.length > 0 && (
+                  <div>
+                    <label className="mb-1 block font-medium text-slate-700">District</label>
+                    <select
+                      name="district"
+                      defaultValue={districtSlug ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
+                    >
+                      <option value="">All Districts</option>
+                      {districts.map((d) => (
+                        <option key={d.id} value={d.slug}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {upazilas.length > 0 && (
+                  <div>
+                    <label className="mb-1 block font-medium text-slate-700">Upazila / Thana</label>
+                    <select
+                      name="upazila"
+                      defaultValue={upazilaSlug ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
+                    >
+                      <option value="">All Upazilas</option>
+                      {upazilas.map((u) => (
+                        <option key={u.id} value={u.slug}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {facilities.length > 0 && (
+                  <div>
+                    <label className="mb-1 block font-medium text-slate-700">Hospital / Facility</label>
+                    <select
+                      name="facility"
+                      defaultValue={facilitySlug ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
+                    >
+                      <option value="">All Facilities</option>
+                      {facilities.map((f) => (
+                        <option key={f.id} value={f.slug}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div>
-                  <label className="mb-1 block font-medium text-slate-700">District</label>
+                  <label className="mb-1 block font-medium text-slate-700">Gender</label>
                   <select
-                    name="district"
-                    defaultValue={districtSlug ?? ""}
-                    className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                    name="gender"
+                    defaultValue={gender ?? ""}
+                    className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
                   >
-                    <option value="">All</option>
-                    {districts.map((d) => (
-                      <option key={d.id} value={d.slug}>
-                        {d.name}
-                      </option>
-                    ))}
+                    <option value="">Any</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="OTHER">Other</option>
                   </select>
                 </div>
-              )}
 
-              {upazilas.length > 0 && (
-                <div>
-                  <label className="mb-1 block font-medium text-slate-700">Upazila</label>
-                  <select
-                    name="upazila"
-                    defaultValue={upazilaSlug ?? ""}
-                    className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">All</option>
-                    {upazilas.map((u) => (
-                      <option key={u.id} value={u.slug}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block font-medium text-slate-700">Min fee (৳)</label>
+                    <input
+                      name="minFee"
+                      type="number"
+                      min={0}
+                      defaultValue={minFee ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-medium text-slate-700">Max fee (৳)</label>
+                    <input
+                      name="maxFee"
+                      type="number"
+                      min={0}
+                      defaultValue={maxFee ?? ""}
+                      className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 text-sm"
+                    />
+                  </div>
                 </div>
-              )}
 
-              {facilities.length > 0 && (
-                <div>
-                  <label className="mb-1 block font-medium text-slate-700">Hospital/Facility</label>
-                  <select
-                    name="facility"
-                    defaultValue={facilitySlug ?? ""}
-                    className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">All</option>
-                    {facilities.map((f) => (
-                      <option key={f.id} value={f.slug}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="mb-1 block font-medium text-slate-700">Gender</label>
-                <select
-                  name="gender"
-                  defaultValue={gender ?? ""}
-                  className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Any</option>
-                  <option value="MALE">Male</option>
-                  <option value="FEMALE">Female</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block font-medium text-slate-700">Min fee</label>
+                <label className="flex items-center gap-2">
                   <input
-                    name="minFee"
-                    type="number"
-                    min={0}
-                    defaultValue={minFee ?? ""}
-                    className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                    type="checkbox"
+                    name="verified"
+                    value="1"
+                    defaultChecked={verified === "1"}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                </div>
-                <div>
-                  <label className="mb-1 block font-medium text-slate-700">Max fee</label>
-                  <input
-                    name="maxFee"
-                    type="number"
-                    min={0}
-                    defaultValue={maxFee ?? ""}
-                    className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
+                  <span>Verified only</span>
+                </label>
 
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="verified"
-                  value="1"
-                  defaultChecked={verified === "1"}
-                  className="h-4 w-4"
-                />
-                <span>Verified only</span>
-              </label>
+                <button className="w-full rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                  Apply filters
+                </button>
+              </form>
+            </FilterGroup>
 
-              <button className="w-full rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-                Apply filters
-              </button>
-            </form>
-          </FilterGroup>
+            {hasActiveFilters && (
+              <Link
+                href={buildQuery({ 
+                  specialty: undefined, 
+                  division: undefined, 
+                  district: undefined, 
+                  upazila: undefined, 
+                  facility: undefined,
+                  gender: undefined,
+                  verified: undefined,
+                  minFee: undefined,
+                  maxFee: undefined,
+                  q: undefined,
+                  page: undefined
+                })}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-100 transition"
+              >
+                <X className="h-4 w-4" />
+                Clear all filters
+              </Link>
+            )}
+          </div>
         </aside>
 
         <section>
@@ -376,18 +426,18 @@ export default async function SearchPage({ searchParams }: Props) {
                 <Link
                   key={d.id}
                   href={`/doctor/${d.slug}`}
-                  className="block rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300"
+                  className="block rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm transition hover:border-slate-300"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4 w-full">
                       <UserAvatar
                         src={d.profilePhoto}
                         name={d.fullName}
                         size="lg"
                         className="ring-2 ring-slate-100 shadow-xs flex-shrink-0"
                       />
-                      <div>
-                        <p className="text-lg font-semibold text-slate-900">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base sm:text-lg font-semibold text-slate-900">
                           {d.fullName}
                           {d.isVerified && (
                             <span className="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 font-normal">
@@ -396,9 +446,9 @@ export default async function SearchPage({ searchParams }: Props) {
                           )}
                         </p>
                         {d.degrees && (
-                          <p className="text-xs font-medium text-indigo-900/90">{d.degrees}</p>
+                          <p className="mt-1 text-xs font-medium text-indigo-900/90 truncate">{d.degrees}</p>
                         )}
-                        <p className="text-sm text-slate-600">
+                        <p className="mt-1 text-sm text-slate-600 truncate">
                           {d.designation ? `${d.designation} · ` : ""}
                           {d.specialty?.name ?? "General practitioner"}{" "}
                           {d.experienceYears !== null && `· ${d.experienceYears} yrs exp.`}
@@ -406,7 +456,7 @@ export default async function SearchPage({ searchParams }: Props) {
                       </div>
                     </div>
                     {d.consultationFee !== null && (
-                      <span className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold flex-shrink-0">
+                      <span className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold flex-shrink-0">
                         ৳{d.consultationFee}
                       </span>
                     )}

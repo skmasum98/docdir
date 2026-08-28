@@ -37,30 +37,30 @@ export default async function HomePage() {
     ]);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-10 space-y-10">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-10 space-y-8 sm:space-y-10">
       {/* Hero Section */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm space-y-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-10 shadow-sm space-y-5 sm:space-y-6">
         <div className="inline-flex items-center gap-1.5 rounded-xl bg-teal-50 border border-teal-200 px-3 py-1 text-xs font-bold text-teal-900">
           <Sparkles className="h-3.5 w-3.5 text-teal-700" />
           <span>Complete Healthcare & Diagnostic Directory</span>
         </div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-3xl">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-3xl">
           Find top doctors & diagnostic centers across Bangladesh
         </h1>
-        <p className="max-w-2xl text-base text-slate-600 leading-relaxed">
+        <p className="max-w-2xl text-sm sm:text-base text-slate-600 leading-relaxed">
           Search verified specialist doctors, compare hospital diagnostic test prices, check patient prep guidelines, and book appointments with confidence.
         </p>
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <Link
             href="/search"
-            className="rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-xs flex items-center gap-2"
+            className="rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition shadow-xs flex items-center justify-center gap-2"
           >
             <Search className="h-4 w-4" />
             <span>Search Doctors</span>
           </Link>
           <Link
             href="/facilities"
-            className="rounded-2xl border border-teal-300 bg-teal-50/80 px-6 py-3 text-sm font-bold text-teal-900 hover:bg-teal-100 transition shadow-2xs flex items-center gap-2"
+            className="rounded-2xl border border-teal-300 bg-teal-50/80 px-6 py-3 text-sm font-bold text-teal-900 hover:bg-teal-100 transition shadow-2xs flex items-center justify-center gap-2"
           >
             <FlaskConical className="h-4 w-4 text-teal-700" />
             <span>Hospitals & Diagnostic Directory</span>
@@ -69,7 +69,7 @@ export default async function HomePage() {
       </section>
 
       {/* Stats Counter */}
-      <section className="grid gap-4 sm:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Verified doctors" value={totalDoctors} href="/search" />
         <Stat label="Specialties" value={specialties} href="/search" />
         <Stat label="Hospitals & Centers" value={totalFacilities} href="/facilities" highlight />
@@ -78,9 +78,9 @@ export default async function HomePage() {
 
       {/* Featured Hospitals & Diagnostics Section */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
               Hospitals & Diagnostic Centers
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -89,7 +89,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/facilities"
-            className="inline-flex items-center gap-1 text-xs font-bold text-teal-800 hover:text-teal-950 transition"
+            className="inline-flex items-center gap-1 text-xs font-bold text-teal-800 hover:text-teal-950 transition self-start"
           >
             <span>Explore all ({totalFacilities})</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -101,7 +101,7 @@ export default async function HomePage() {
             <Link
               key={f.id}
               href={`/facility/${f.slug}`}
-              className="group flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:border-teal-300 hover:shadow-md transition space-y-4"
+              className="group flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-teal-300 hover:shadow-md transition space-y-4"
             >
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -136,11 +136,11 @@ export default async function HomePage() {
 
       {/* Featured Doctors Section */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-900">Featured Verified Doctors</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Featured Verified Doctors</h2>
           <Link
             href="/search"
-            className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-slate-900 transition"
+            className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-slate-900 transition self-start"
           >
             <span>View all doctors</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -150,12 +150,12 @@ export default async function HomePage() {
         {featuredDoctors.length === 0 ? (
           <p className="text-sm text-slate-500">No doctors published yet.</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featuredDoctors.map((d) => (
               <Link
                 key={d.id}
                 href={`/doctor/${d.slug}`}
-                className="group flex items-start gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                className="group flex items-start gap-3 sm:gap-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md"
               >
                 <UserAvatar
                   src={d.profilePhoto}
@@ -164,7 +164,7 @@ export default async function HomePage() {
                   className="ring-2 ring-slate-100 shadow-xs shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                  <p className="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
                     {d.fullName}
                   </p>
                   <p className="mt-1 text-sm text-slate-600 truncate">
@@ -195,7 +195,7 @@ function Stat({
 }) {
   const content = (
     <div
-      className={`rounded-3xl border p-6 shadow-sm transition ${
+      className={`rounded-3xl border p-4 sm:p-6 shadow-sm transition ${
         highlight
           ? "border-teal-200 bg-teal-50/50 hover:bg-teal-50"
           : "border-slate-200 bg-white hover:border-slate-300"
@@ -203,7 +203,7 @@ function Stat({
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       <p
-        className={`mt-2 text-3xl font-extrabold ${
+        className={`mt-2 text-2xl sm:text-3xl font-extrabold ${
           highlight ? "text-teal-950" : "text-slate-900"
         }`}
       >

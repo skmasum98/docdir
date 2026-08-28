@@ -12,12 +12,15 @@ export default async function proxy(request: NextRequest) {
   const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
 
   if (!isProtected && !isAdminRoute) {
-    return NextResponse.next();
+    // Add security headers to all responses
+    const response = NextResponse.next();
+    addSecurityHeaders(response);
+    return response;
   }
 
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET || "doctor-directory-secret-key-12345",
+    secret: process.env.NEXTAUTH_SECRET,
     cookieName: "next-auth.session-token",
   });
 
@@ -31,9 +34,19 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  addSecurityHeaders(response);
+  return response;
+}
+
+function addSecurityHeaders(response: NextResponse) {
+  // Security headers for production
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/((?!_next/static|_next/image|favicon.ico).*)"],
 };

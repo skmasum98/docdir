@@ -24,4 +24,107 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Mobile-first responsive improvements */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Improve form inputs on mobile */
+input, select, textarea, button {
+  font-size: 16px; /* Prevents iOS zoom on focus */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+}
+
+/* Better focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Ensure buttons are touch-friendly on mobile */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Optimize images for performance */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Improve text readability on small screens */
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.3;
+  }
+}
+
+/* Hide scrollbar but keep functionality for horizontal scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth animations */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-from-top {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.slide-in-from-top {
+  animation: slide-in-from-top 0.2s ease-out;
+}
+
+/* Better print styles */
+@media print {
+  header, footer, nav, button, .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
 }

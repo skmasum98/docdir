@@ -104,7 +104,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "doctor-directory-secret-key-12345",
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 export const auth = () => getServerSession(authOptions);

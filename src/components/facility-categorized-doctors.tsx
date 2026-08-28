@@ -81,15 +81,15 @@ export function FacilityCategorizedDoctors({
   }, [doctorFacilities, searchQuery, selectedSpecialty]);
 
   return (
-    <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-8 shadow-sm space-y-5 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 shrink-0">
               <Stethoscope className="h-4 w-4" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
               Specialist Doctors at {facilityName}
             </h2>
           </div>
@@ -98,9 +98,9 @@ export function FacilityCategorizedDoctors({
           </p>
         </div>
 
-        <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 self-start md:self-auto">
+        <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 self-start md:self-auto shrink-0">
           <UserCheck className="h-4 w-4 text-slate-500" />
-          {doctorFacilities.length} Practicing Doctors
+          {doctorFacilities.length} Doctors
         </span>
       </div>
 
@@ -177,22 +177,22 @@ export function FacilityCategorizedDoctors({
           </div>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {filteredDoctors.map((df) => {
             const doc = df.doctor;
             return (
               <Link
                 key={df.id}
                 href={`/doctor/${doc.slug}`}
-                className="group block rounded-2xl border border-slate-200/90 bg-white p-5 transition hover:border-indigo-300 hover:bg-indigo-50/20 hover:shadow-2xs space-y-3"
+                className="group block rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 transition hover:border-indigo-300 hover:bg-indigo-50/20 hover:shadow-2xs space-y-3"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-lg mb-1.5">
                       <Stethoscope className="h-3 w-3" />
                       {doc.specialty?.name ?? "General Specialist"}
                     </span>
-                    <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition text-base">
+                    <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition text-base truncate">
                       {doc.fullName}
                     </h3>
                   </div>
@@ -200,7 +200,7 @@ export function FacilityCategorizedDoctors({
                   {doc.consultationFee ? (
                     <div className="text-right shrink-0">
                       <span className="text-[10px] text-slate-500 block uppercase tracking-wide">
-                        Chamber Fee
+                        Fee
                       </span>
                       <span className="text-sm font-extrabold text-slate-900">
                         ৳{doc.consultationFee.toLocaleString()}
@@ -232,8 +232,8 @@ export function FacilityCategorizedDoctors({
                   <span className="text-slate-500 text-[11px]">
                     Practicing at this center
                   </span>
-                  <span className="font-semibold text-indigo-600 group-hover:underline flex items-center gap-1">
-                    View Full Profile & Book →
+                  <span className="font-semibold text-indigo-600 group-hover:underline flex items-center gap-1 shrink-0">
+                    View Profile →
                   </span>
                 </div>
               </Link>
