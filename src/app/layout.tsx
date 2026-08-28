@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "medical directory",
     "healthcare Bangladesh",
   ],
-  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://doctordirectory.com"),
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://drchamber.info"),
   alternates: {
     canonical: "/",
   },
