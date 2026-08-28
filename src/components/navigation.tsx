@@ -24,7 +24,7 @@ export function Navigation({ session, role, dbUserImage }: NavigationProps) {
             alt="Doctor Directory Logo"
             className="h-16 w-auto sm:h-9 sm:w-9 rounded-full object-cover"
           />
-          <span className="hidden sm:inline">Doctor Directory</span>
+          <span className="hidden sm:inline">Doctor Chamber</span>
         </Link>
 
         {/* Desktop Navigation */}
