@@ -47,15 +47,21 @@ export const loginSchema = z
 
 export const forgotPasswordSchema = z
   .object({
-    identifier: z.string().trim().min(3, "Please enter your email or phone number"),
+    identifier: z.string().trim().min(3, "Please enter your email or phone number").max(160),
     method: z.enum(["EMAIL", "WHATSAPP"]).default("EMAIL"),
   })
   .strict();
 
+export const otpSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "OTP must be 6 digits")
+  .length(6, "OTP must be exactly 6 digits");
+
 export const resetPasswordSchema = z
   .object({
-    identifier: z.string().trim().min(3, "Email or phone is required"),
-    otp: z.string().trim().min(4, "Please enter the verification code").max(10),
+    identifier: z.string().trim().min(3, "Email or phone is required").max(160),
+    otp: otpSchema,
     newPassword: passwordSchema,
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })

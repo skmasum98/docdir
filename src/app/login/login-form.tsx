@@ -113,7 +113,7 @@ export default function LoginForm({
         {pending ? "Signing in..." : "Sign in"}
       </button>
 
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-600">
+      {/* <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-600">
         <div className="flex items-center justify-between">
           <span>Admin Account:</span>
           <button
@@ -124,7 +124,7 @@ export default function LoginForm({
             Auto-fill Super Admin
           </button>
         </div>
-      </div>
+      </div> */}
 
       <p className="text-center text-sm text-slate-600">
         New here?{" "}
