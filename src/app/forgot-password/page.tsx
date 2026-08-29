@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900">Password Recovery</h1>
-              <p className="text-xs text-slate-500">Verify your identity via Email or WhatsApp</p>
+              <p className="text-xs text-slate-500">Verify your identity via Email </p>
             </div>
           </div>
 
