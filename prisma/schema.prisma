@@ -25,6 +25,67 @@ model User {
   facilityClaims FacilityClaim[]
   reviews       Review[]
   otpCodes      OtpCode[]
+  appointments  Appointment[]
+  bookedAppointments Appointment[] @relation("BookedByUser")
+  schedules     Schedule[]    @relation("ScheduleCreatedBy")
+  dateOverrides DateOverride[] @relation("OverrideCreatedBy")
+  receptionist  Receptionist?
+  smsBalance    SmsBalance?
+  smsTransactions SmsTransaction[]
+  pendingBkashPayments PendingBkashPayment[]
+}
+
+model Doctor {
+  id               Int              @id @default(autoincrement())
+  userId           Int?             @unique
+  fullName         String
+  slug             String           @unique
+  profilePhoto     String?          @db.Text
+  degrees          String?          @db.Text
+  designation      String?
+  gender           Gender?
+  bmdcNumber       String?          @unique
+  experienceYears  Int?
+  consultationFee  Int?
+  followUpFee      Int?
+  visitingHours    String?          @db.Text
+  services         String?          @db.Text
+  about            String?          @db.LongText
+  phone            String?
+  appointmentPhone String?
+  email            String?
+  website          String?
+  facebook         String?
+  linkedin         String?
+  hospitalName     String?
+  chamberAddress   String?          @db.Text
+  city             String?
+  area             String?
+  isVerified       Boolean          @default(false)
+  profileClaimed   Boolean          @default(false)
+  createdByAdmin   Boolean          @default(true)
+  status           DoctorStatus     @default(PUBLISHED)
+  specialtyId      Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  avgConsultationMinutes Int        @default(10)
+  smsEnabled       Boolean          @default(false)
+  blogs            Blog[]
+  specialty        Specialty?       @relation(fields: [specialtyId], references: [id])
+  user             User?            @relation(fields: [userId], references: [id])
+  claims           DoctorClaim[]
+  doctorFacilities DoctorFacility[]
+  reviews          Review[]
+  schedules        Schedule[]
+  slots            ScheduleSlot[]
+  appointments     Appointment[]
+  receptionists    Receptionist[]
+  dateOverrides    DateOverride[]
+
+  @@index([fullName])
+  @@index([city])
+  @@index([area])
+  @@index([specialtyId])
 }
 
 model OtpCode {
@@ -69,52 +130,6 @@ model Specialty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   doctors   Doctor[]
-}
-
-model Doctor {
-  id               Int              @id @default(autoincrement())
-  userId           Int?             @unique
-  fullName         String
-  slug             String           @unique
-  profilePhoto     String?          @db.Text
-  degrees          String?          @db.Text
-  designation      String?
-  gender           Gender?
-  bmdcNumber       String?          @unique
-  experienceYears  Int?
-  consultationFee  Int?
-  followUpFee      Int?
-  visitingHours    String?          @db.Text
-  services         String?          @db.Text
-  about            String?          @db.LongText
-  phone            String?
-  appointmentPhone String?
-  email            String?
-  website          String?
-  facebook         String?
-  linkedin         String?
-  hospitalName     String?
-  chamberAddress   String?          @db.Text
-  city             String?
-  area             String?
-  isVerified       Boolean          @default(false)
-  profileClaimed   Boolean          @default(false)
-  createdByAdmin   Boolean          @default(true)
-  status           DoctorStatus     @default(PUBLISHED)
-  specialtyId      Int?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  blogs            Blog[]
-  specialty        Specialty?       @relation(fields: [specialtyId], references: [id])
-  user             User?            @relation(fields: [userId], references: [id])
-  claims           DoctorClaim[]
-  doctorFacilities DoctorFacility[]
-  reviews          Review[]
-
-  @@index([fullName])
-  @@index([city])
-  @@index([area])
-  @@index([specialtyId])
 }
 
 model Review {
@@ -229,6 +244,8 @@ model Facility {
   tests            FacilityTest[]
   upazila          Upazila          @relation(fields: [upazilaId], references: [id])
   claims           FacilityClaim[]
+  schedules        Schedule[]
+  facilitySlots    ScheduleSlot[]
 
   @@index([slug])
   @@index([upazilaId])
@@ -328,4 +345,254 @@ enum FacilityType {
   CLINIC
   PHARMACY
   CHAMBER
+}
+
+// =====================================================================
+// APPOINTMENT & SCHEDULE MANAGEMENT (Serial Booking System)
+// =====================================================================
+
+model Receptionist {
+  id           Int      @id @default(autoincrement())
+  doctorId     Int
+  userId       Int      @unique
+  name         String
+  phone        String
+  canCancel    Boolean  @default(true)
+  canBookOffline Boolean @default(true)
+  canMarkNoShow Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  doctor   Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookedAppointments Appointment[] @relation("BookedByReceptionist")
+
+  @@index([doctorId])
+  @@index([userId])
+}
+
+model Schedule {
+  id             Int      @id @default(autoincrement())
+  doctorId       Int
+  facilityId     Int?
+  dayOfWeek      Int      // 0=Sunday, 1=Monday ... 6=Saturday
+  startTime      String   // "17:00" (24h)
+  endTime        String   // "21:00" (24h)
+  slotDuration   Int      @default(10) // minutes
+  maxPatients    Int      @default(20)
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  isActive       Boolean  @default(true)
+  createdById    Int
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  doctor     Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  facility   Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  createdBy  User   @relation("ScheduleCreatedBy", fields: [createdById], references: [id])
+  slots      ScheduleSlot[]
+  dateOverrides DateOverride[]
+
+  @@index([doctorId, isActive])
+  @@index([dayOfWeek, isActive])
+}
+
+model DateOverride {
+  id             Int      @id @default(autoincrement())
+  scheduleId     Int
+  doctorId       Int
+  overrideDate   DateTime @db.Date
+  isBlocked      Boolean  @default(true) // true = chamber off, false = extra day
+  reason         String?  @db.Text
+  createdById    Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("OverrideCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([scheduleId, overrideDate])
+  @@index([doctorId, overrideDate])
+  @@index([scheduleId, overrideDate])
+}
+
+model ScheduleSlot {
+  id             Int      @id @default(autoincrement())
+  scheduleId     Int
+  doctorId       Int
+  facilityId     Int?
+  slotDate       DateTime @db.Date
+  startTime      DateTime
+  endTime        DateTime
+  serialNumber   Int
+  status         SlotStatus @default(AVAILABLE)
+  blockedReason  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  facility    Facility? @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  appointment Appointment?
+
+  @@unique([scheduleId, slotDate, serialNumber])
+  @@index([doctorId, slotDate])
+  @@index([slotDate, status])
+  @@index([scheduleId, slotDate])
+}
+
+model Appointment {
+  id                  Int      @id @default(autoincrement())
+  slotId              Int      @unique
+  doctorId            Int
+  patientId           Int
+  patientName         String
+  patientPhone        String
+  patientEmail        String?
+  serialNumber        Int
+  bookingSource       BookingSource
+  bookedByUserId      Int?     // patient self-booked
+  bookedByReceptionistId Int?  // receptionist offline-booked
+  status              AppointmentStatus @default(SCHEDULED)
+  chiefComplaint      String?  @db.Text
+  estimatedTime       DateTime?
+  actualStartTime     DateTime?
+  actualEndTime       DateTime?
+  cancelledAt         DateTime?
+  cancelledByUserId   Int?
+  cancellationReason  String?
+  smsConfirmationSent Boolean  @default(false)
+  smsReminderSent     Boolean  @default(false)
+  notes               String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  slot                ScheduleSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  doctor              Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient             User         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  bookedByUser        User?        @relation("BookedByUser", fields: [bookedByUserId], references: [id], onDelete: SetNull)
+  bookedByReceptionist Receptionist? @relation("BookedByReceptionist", fields: [bookedByReceptionistId], references: [id], onDelete: SetNull)
+
+  @@index([doctorId, status])
+  @@index([patientId])
+  @@index([status])
+  @@index([slotId])
+}
+
+// =====================================================================
+// SMS BALANCE & TRANSACTIONS (BulkSMS BD Integration)
+// =====================================================================
+
+model SmsBalance {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  doctorId     Int?     @unique
+  smsEnabled   Boolean  @default(false)
+  totalCredits Int      @default(0)
+  usedCredits  Int      @default(0)
+  lowBalanceAlert Int   @default(10)
+  lastTopupAt  DateTime?
+  autoDisableAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions SmsTransaction[]
+
+  @@index([userId])
+  @@index([doctorId])
+}
+
+model SmsTransaction {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  balanceId       Int
+  type            SmsTransactionType
+  amount          Int      // positive for top-up, negative for usage
+  credits         Int      // SMS credits
+  costBdt         Float    // amount in BDT
+  bkashTrxId      String?
+  bkashPaymentId  String?
+  status          SmsTransactionStatus @default(PENDING)
+  description     String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance SmsBalance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([balanceId])
+  @@index([status])
+  @@index([bkashPaymentId])
+}
+
+model PendingBkashPayment {
+  id              Int      @id @default(autoincrement())
+  paymentId       String   @unique // bKash payment ID
+  userId          Int
+  credits         Int
+  costBdt         Float
+  invoiceNumber   String
+  status          PendingPaymentStatus @default(PENDING)
+  trxId           String?
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  BLOCKED
+  COMPLETED
+  NO_SHOW
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum BookingSource {
+  ONLINE
+  PHONE
+  WALK_IN
+  RECEPTIONIST
+  ADMIN
+}
+
+enum SmsTransactionType {
+  TOPUP
+  USAGE
+  REFUND
+  ADJUSTMENT
+}
+
+enum SmsTransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PendingPaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+  CANCELLED
 }

@@ -6,9 +6,21 @@ import { UserRole } from "@/lib/enums";
 import DoctorProfileForm from "./doctor-profile-form";
 import UserReviews from "./user-reviews";
 import ProfileSection from "./profile-section";
-import { Building2, Stethoscope, ShieldCheck, ChevronRight, FlaskConical, UserCheck } from "lucide-react";
+import {
+  Building2,
+  Stethoscope,
+  ShieldCheck,
+  ChevronRight,
+  FlaskConical,
+  UserCheck,
+  Calendar,
+  Users,
+  MessageSquare,
+  CreditCard,
+  Phone,
+} from "lucide-react";
 
-export const metadata = { 
+export const metadata = {
   title: "Dashboard | Doctor Directory Bangladesh",
   description: "Manage your medical credentials, hospital facilities, diagnostic test catalogs, and patient reviews.",
   robots: { index: false, follow: false },
@@ -39,6 +51,17 @@ export default async function DashboardPage({ searchParams }: Props) {
     image: currentUser.image,
     role: currentUser.role,
   };
+
+  // Check if user is a receptionist first
+  const receptionist = await prisma.receptionist.findUnique({
+    where: { userId: currentUser.id },
+    include: { doctor: { select: { fullName: true } } },
+  });
+
+  if (receptionist && receptionist.isActive) {
+    // Redirect to dedicated receptionist dashboard
+    redirect("/dashboard/receptionist-dashboard");
+  }
 
   // Check for facilities owned/managed by this user
   const userFacilities = await prisma.facility.findMany({
@@ -72,10 +95,23 @@ export default async function DashboardPage({ searchParams }: Props) {
     });
     const specialties = await prisma.specialty.findMany({ orderBy: { name: "asc" } });
 
+    // Get today's queue stats
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayQueue = doctor
+      ? await prisma.scheduleSlot.count({
+          where: {
+            doctorId: doctor.id,
+            slotDate: today,
+            status: { in: ["BOOKED"] },
+          },
+        })
+      : 0;
+
     return (
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Doctor Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Doctor Dashboard</h1>
           <p className="mt-1 text-sm text-slate-600">
             Manage your medical credentials, visiting schedule, chamber addresses, and patient reviews.
           </p>
@@ -86,6 +122,86 @@ export default async function DashboardPage({ searchParams }: Props) {
             Changes saved successfully.
           </div>
         )}
+
+        {/* Quick Actions - Serial Management */}
+        <section className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 sm:p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
+              <Stethoscope className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-indigo-950">Serial Management</h2>
+              <p className="text-xs text-indigo-700/80">Online booking & queue control</p>
+            </div>
+          </div>
+
+          {todayQueue > 0 && (
+            <div className="rounded-2xl bg-white/80 border border-indigo-200 px-3 py-2 text-xs text-indigo-800 flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <strong>{todayQueue}</strong> patient{todayQueue !== 1 ? "s" : ""} booked for today
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Link
+              href="/dashboard/queue"
+              className="group flex items-center gap-3 rounded-2xl bg-white p-3.5 border border-indigo-200 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900">Today&apos;s Queue</p>
+                <p className="text-[10px] text-slate-500">Manage live patient queue</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
+
+            <Link
+              href="/dashboard/schedules"
+              className="group flex items-center gap-3 rounded-2xl bg-white p-3.5 border border-indigo-200 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900">Schedules & Slots</p>
+                <p className="text-[10px] text-slate-500">Set your chamber hours</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
+
+            <Link
+              href="/dashboard/receptionists"
+              className="group flex items-center gap-3 rounded-2xl bg-white p-3.5 border border-indigo-200 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition">
+                <UserCheck className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900">Receptionists</p>
+                <p className="text-[10px] text-slate-500">Manage chamber staff</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
+
+            <Link
+              href="/dashboard/sms"
+              className="group flex items-center gap-3 rounded-2xl bg-white p-3.5 border border-indigo-200 hover:border-indigo-400 hover:shadow-sm transition"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900">SMS Service</p>
+                <p className="text-[10px] text-slate-500">Notify patients via SMS</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
+          </div>
+        </section>
 
         {/* User Profile & Image CRUD */}
         <ProfileSection user={userData} />
@@ -247,9 +363,9 @@ export default async function DashboardPage({ searchParams }: Props) {
   });
 
   return (
-    <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">Your Account</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Your Account</h1>
         <p className="mt-1 text-sm text-slate-600">
           Manage your account profile image, personal info, and review activity.
         </p>
@@ -260,6 +376,33 @@ export default async function DashboardPage({ searchParams }: Props) {
           Changes saved successfully.
         </div>
       )}
+
+      {/* Quick Actions - Appointments */}
+      <section className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-50 p-5 sm:p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-indigo-950">My Appointments</h2>
+            <p className="text-xs text-indigo-700/80">Track live queue, see upcoming visits</p>
+          </div>
+        </div>
+
+        <Link
+          href="/dashboard/appointments"
+          className="group flex items-center gap-3 rounded-2xl bg-white p-3.5 border border-indigo-200 hover:border-indigo-400 hover:shadow-sm transition"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-900">View My Appointments</p>
+            <p className="text-[10px] text-slate-500">Live queue position, upcoming visits, history</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-slate-400" />
+        </Link>
+      </section>
 
       {/* Professional & Institute Claim Prompt Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

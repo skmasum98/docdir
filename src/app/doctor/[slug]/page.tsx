@@ -8,6 +8,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { DoctorShareButton } from "@/components/doctor-share-button";
 import { DoctorClaimBanner } from "@/components/doctor-claim-banner";
 import { FacilityLogo } from "@/components/facility-logo";
+import BookingModal from "@/components/booking-modal";
 import {
   Stethoscope,
   Clock,
@@ -450,22 +451,28 @@ export default async function DoctorPage({ params }: Props) {
                 )}
               </div>
 
-              {/* Primary Call / Serial Booking Action */}
+              {/* Online Booking */}
               <div className="space-y-2">
+                <BookingModal
+                  doctorId={doctor.id}
+                  doctorName={doctor.fullName}
+                  specialty={doctor.specialty?.name || null}
+                  consultationFee={doctor.consultationFee}
+                  userLoggedIn={Boolean(session?.user)}
+                  userName={session?.user?.name || undefined}
+                  userEmail={session?.user?.email || undefined}
+                />
+
                 {appointmentPhone ? (
                   <a
                     href={`tel:${cleanPhoneForDial}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition"
                     aria-label={`Call to book appointment: ${appointmentPhone}`}
                   >
                     <Phone className="h-4 w-4" />
-                    Book Serial: {appointmentPhone}
+                    Or Call: {appointmentPhone}
                   </a>
-                ) : (
-                  <div className="text-center rounded-2xl bg-slate-200/60 p-3 text-xs text-slate-600 font-medium">
-                    Contact hospital reception for serial
-                  </div>
-                )}
+                ) : null}
 
                 {appointmentPhone && (
                   <a
