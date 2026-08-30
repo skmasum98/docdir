@@ -5,6 +5,13 @@
  *   Required params: api_key, type, number, senderid, message
  *
  * Cost: ~৳0.30-0.50 per SMS depending on volume
+ *
+ * Note: If you get error code 1031 "You have no access for SMS Sending",
+ * check these in your BulkSMS BD account:
+ *   1. SMS sending is enabled on your account
+ *   2. Your API key has "Send SMS" permission
+ *   3. Your Sender ID is registered and approved
+ *   4. You have sufficient balance
  */
 
 const BULKSMS_API_KEY = process.env.BULKSMS_API_KEY || "";
@@ -22,7 +29,33 @@ interface SendSmsResult {
   success: boolean;
   error?: string;
   messageId?: string;
+  errorCode?: string;
 }
+
+// Mapping of BulkSMS BD error codes to user-friendly messages
+// Based on official BulkSMS BD documentation
+const ERROR_MESSAGES: Record<string, string> = {
+  "202": "SMS submitted successfully",
+  "1001": "Invalid phone number. Use format: 88017XXXXXXXX, 88018XXXXXXXX, 88019XXXXXXXX",
+  "1002": "Sender ID not correct or disabled. Please check your registered sender ID in BulkSMS BD dashboard",
+  "1003": "Required fields missing or contact your system administrator",
+  "1005": "Internal error. Please try again later",
+  "1006": "Balance validity not available. Please recharge your BulkSMS BD account",
+  "1007": "Balance insufficient. Please recharge your BulkSMS BD account",
+  "1011": "User ID not found. Please verify your API key",
+  "1012": "Masking SMS must be sent in Bengali",
+  "1013": "Sender ID has not found gateway by API key. Contact support@bulksmsbd.net",
+  "1014": "Sender type name not found using this sender by API key",
+  "1015": "Sender ID has not found any valid gateway by API key",
+  "1016": "Sender type name active price info not found by this sender ID",
+  "1017": "Sender type name price info not found by this sender ID",
+  "1018": "The owner of this (username) account is disabled. Contact BulkSMS BD admin",
+  "1019": "The (sender type name) price of this (username) account is disabled",
+  "1020": "The parent of this account is not found",
+  "1021": "The parent active (sender type name) price of this account is not found",
+  "1031": "Your account is not verified. Please contact BulkSMS BD administrator to verify your account at support@bulksmsbd.net",
+  "1032": "Your IP is not whitelisted. Add your server IP to BulkSMS BD whitelist",
+};
 
 function formatPhone(phone: string): string {
   // Remove all non-digits
@@ -46,7 +79,7 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
 
   const phone = formatPhone(input.to);
   if (phone.length < 13) {
-    return { success: false, error: "Invalid phone number" };
+    return { success: false, error: "Invalid phone number (use 01XXXXXXXXX format)" };
   }
 
   try {
@@ -55,7 +88,6 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
     let url: string;
     if (BULKSMS_API_URL.includes("number=Receiver")) {
       // Replace the placeholder Receiver with the actual phone, and TestSMS with our message
-      // The full URL has all params encoded in the URL
       url = BULKSMS_API_URL
         .replace("number=Receiver", `number=${phone}`)
         .replace("message=TestSMS", `message=${encodeURIComponent(input.message)}`);
@@ -75,41 +107,36 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
     const text = await response.text();
     const trimmed = text.trim();
 
-    // BulkSMS BD may return either a plain code string or a JSON object
-    let success = false;
-    let errorCode = trimmed;
-
     // Try parsing as JSON first
     try {
       const json = JSON.parse(trimmed);
-      if (json.response_code) {
-        errorCode = String(json.response_code);
-        // Success codes: 1000, 1001, 1002, etc. (varies)
-        success = /^1[0-9]{3}$/.test(errorCode) && !["1003", "1004", "1005", "1006", "1007", "1008", "1009", "1010", "1011", "1012", "1013", "1014", "1031"].includes(errorCode);
-        if (!success) {
-          return {
-            success: false,
-            error: json.error_message || `BulkSMS error code: ${errorCode}`,
-          };
+      if (json.response_code !== undefined) {
+        const code = String(json.response_code);
+        // Success codes from BulkSMS BD
+        if (code === "202" || code === "200" || code === "1000" || code === "1101" || code === "1102") {
+          return { success: true, messageId: code };
         }
-        return { success: true, messageId: errorCode };
+        // Error response
+        return {
+          success: false,
+          errorCode: code,
+          error: ERROR_MESSAGES[code] || json.error_message || `BulkSMS error code: ${code}`,
+        };
       }
     } catch {
       // Not JSON, treat as plain text code
     }
 
-    // Success codes for plain text response
-    const successCodes = ["1101", "1102", "1000", "100"];
-
-    if (successCodes.includes(trimmed) || /^1[0-9]{3}$/.test(trimmed)) {
+    // Plain text response (older API)
+    if (trimmed === "202" || trimmed === "1000" || trimmed === "1101" || trimmed === "1102" || trimmed === "OK") {
       return { success: true, messageId: trimmed };
-    } else {
-      console.error("BulkSMS error response:", text);
-      return {
-        success: false,
-        error: `BulkSMS error code: ${trimmed || "Unknown"}`,
-      };
     }
+
+    return {
+      success: false,
+      errorCode: trimmed,
+      error: ERROR_MESSAGES[trimmed] || `BulkSMS error code: ${trimmed || "Unknown"}`,
+    };
   } catch (error) {
     console.error("BulkSMS send error:", error);
     return {
@@ -167,3 +194,4 @@ export async function sendCancellationSms(data: {
   const message = `Dr Chamber: ${data.patientName}, your appointment (Serial #${data.serialNumber}) with ${data.doctorName} has been cancelled. Book again at drchamber.info -DRCHAMBER`;
   return sendSms({ to: data.to, message });
 }
+
