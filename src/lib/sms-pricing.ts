@@ -4,7 +4,7 @@
  */
 
 export const SMS_PRICING_TIERS = [
-  { credits: 100, priceBdt: 6, label: "100 SMS - ৳60" },
+  { credits: 100, priceBdt: 60, label: "100 SMS - ৳60" },
   { credits: 250, priceBdt: 140, label: "250 SMS - ৳140" },
   { credits: 500, priceBdt: 260, label: "500 SMS - ৳260" },
   { credits: 1000, priceBdt: 500, label: "1000 SMS - ৳500" },
