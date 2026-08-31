@@ -18,10 +18,17 @@ export default async function proxy(request: NextRequest) {
     return response;
   }
 
+  // Use the right cookie name based on environment.
+  // In production (HTTPS), NextAuth uses the "__Secure-" prefix.
+  const cookieName =
+    process.env.NODE_ENV === "production"
+      ? "__Secure-next-auth.session-token"
+      : "next-auth.session-token";
+
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    cookieName: "next-auth.session-token",
+    cookieName,
   });
 
   if (!token) {
@@ -30,7 +37,10 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isAdminRoute && token.role !== "ADMIN") {
+  // Token.role is augmented via src/lib/next-auth.d.ts
+  const role = (token as { role?: string }).role;
+
+  if (isAdminRoute && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -45,6 +55,30 @@ function addSecurityHeaders(response: NextResponse) {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  // HSTS - only over HTTPS in production
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
+
+  // Basic Content-Security-Policy. This is a starting point;
+  // tighten for production based on actual needs (script-src, img-src, etc.)
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https:",
+    "frame-src 'self' https://*.bkash.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+  response.headers.set("Content-Security-Policy", csp);
 }
 
 export const config = {
