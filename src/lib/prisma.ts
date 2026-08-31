@@ -3,14 +3,30 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 export { Prisma };
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+};
+
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  return value;
+}
 
 function createPrismaClient(): PrismaClient {
-  const host = process.env.DATABASE_HOST || "mysql.gb.stackcp.com";
-  const port = parseInt(process.env.DATABASE_PORT || "42132", 10);
-  const user = process.env.DATABASE_USER || "doctor_db_user";
-  const password = process.env.DATABASE_PASSWORD || "lpl02751";
-  const database = process.env.DATABASE_NAME || "doctor_directory-353131338c3f";
+  const host = getRequiredEnv("DATABASE_HOST");
+  const port = Number(getRequiredEnv("DATABASE_PORT"));
+  const user = getRequiredEnv("DATABASE_USER");
+  const password = getRequiredEnv("DATABASE_PASSWORD");
+  const database = getRequiredEnv("DATABASE_NAME");
+
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error("DATABASE_PORT must be a valid port number");
+  }
 
   const adapter = new PrismaMariaDb(
     {
@@ -24,13 +40,18 @@ function createPrismaClient(): PrismaClient {
       connectTimeout: 10000,
       connectionLimit: 10,
     },
-    { useTextProtocol: true }
+    {
+      useTextProtocol: true,
+    }
   );
 
-  return new PrismaClient({ adapter });
+  return new PrismaClient({
+    adapter,
+  });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const prisma =
+  globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;

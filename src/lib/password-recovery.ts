@@ -1,17 +1,17 @@
 import crypto from "crypto";
 
 interface VerificationRecord {
-  identifier: string; // email or phone
+  identifier: string;
   otp: string;
   token: string;
-  method: "EMAIL" | "WHATSAPP";
-  expiresAt: number; // timestamp
+  method: "EMAIL";
+  expiresAt: number;
   attempts: number;
   userId: number;
   userName: string;
 }
 
-// In-memory persistent record map on globalThis to survive HMR in dev
+// In-memory store persisted on globalThis to survive HMR in development.
 const globalRecoveryStore = globalThis as unknown as {
   _recoveryStore?: Map<string, VerificationRecord>;
 };
@@ -22,83 +22,150 @@ if (!globalRecoveryStore._recoveryStore) {
 
 const store = globalRecoveryStore._recoveryStore;
 
-export function generateVerificationOTP(
-  user: { id: number; name: string; email: string; phone: string | null },
-  method: "EMAIL" | "WHATSAPP"
-): { otp: string; token: string; expiresMinutes: number; whatsappUrl?: string } {
-  // Generate 6-digit numeric OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const token = crypto.randomBytes(24).toString("hex");
+/**
+ * Generate a secure 6-digit OTP for email password recovery.
+ *
+ * crypto.randomInt() is used instead of Math.random()
+ * because Math.random() is not suitable for security-sensitive
+ * values such as password reset OTPs.
+ */
+export function generateVerificationOTP(user: {
+  id: number;
+  name: string;
+  email: string;
+}): {
+  otp: string;
+  token: string;
+  expiresMinutes: number;
+} {
+  const identifier = user.email.toLowerCase().trim();
+
+  // Cryptographically secure 6-digit OTP.
+  const otp = crypto.randomInt(100000, 1000000).toString();
+
+  // Cryptographically secure recovery token.
+  const token = crypto.randomBytes(32).toString("hex");
+
   const expiresMinutes = 15;
   const expiresAt = Date.now() + expiresMinutes * 60 * 1000;
 
   const record: VerificationRecord = {
-    identifier: (method === "EMAIL" ? user.email : user.phone || user.email).toLowerCase().trim(),
+    identifier,
     otp,
     token,
-    method,
+    method: "EMAIL",
     expiresAt,
     attempts: 0,
     userId: user.id,
     userName: user.name,
   };
 
-  // Store indexed by identifier and token
-  store.set(record.identifier, record);
-  store.set(token, record);
+  // Remove any previous recovery request for this email.
+  const existingRecord = store.get(identifier);
 
-  let whatsappUrl: string | undefined;
-  if (method === "WHATSAPP" && user.phone) {
-    const cleanPhone = user.phone.replace(/[^0-9]/g, "");
-    const msg = encodeURIComponent(
-      `Hello ${user.name},\nYour Doctor Directory password reset verification code is: *${otp}*\nThis code expires in 15 minutes. If you did not request this, please ignore this message.`
-    );
-    whatsappUrl = `https://wa.me/${cleanPhone.startsWith("88") ? cleanPhone : `88${cleanPhone}`}?text=${msg}`;
+  if (existingRecord) {
+    store.delete(existingRecord.identifier);
+    store.delete(existingRecord.token);
   }
 
-  return { otp, token, expiresMinutes, whatsappUrl };
+  // Store by both email and token.
+  store.set(identifier, record);
+  store.set(token, record);
+
+  return {
+    otp,
+    token,
+    expiresMinutes,
+  };
 }
 
+/**
+ * Verify an OTP using either the user's email or recovery token.
+ */
 export function verifyOTP(
   identifierOrToken: string,
   enteredOtp?: string
-): { valid: boolean; message: string; userId?: number; userEmail?: string } {
+): {
+  valid: boolean;
+  message: string;
+  userId?: number;
+  userEmail?: string;
+} {
   const key = identifierOrToken.toLowerCase().trim();
   const record = store.get(key);
 
   if (!record) {
     return {
       valid: false,
-      message: "No active verification request found or it has expired. Please request a new code.",
+      message:
+        "No active verification request found or it has expired. Please request a new code.",
     };
   }
 
+  // Check expiration.
   if (Date.now() > record.expiresAt) {
-    store.delete(key);
-    store.delete(record.token);
     store.delete(record.identifier);
+    store.delete(record.token);
+
     return {
       valid: false,
-      message: "Verification code has expired. Please request a new code.",
+      message:
+        "Verification code has expired. Please request a new code.",
     };
   }
 
+  // Maximum 5 OTP attempts.
   if (record.attempts >= 5) {
-    store.delete(key);
+    store.delete(record.identifier);
+    store.delete(record.token);
+
     return {
       valid: false,
-      message: "Too many incorrect attempts. Please request a new verification code.",
+      message:
+        "Too many incorrect attempts. Please request a new verification code.",
     };
   }
 
-  if (enteredOtp) {
-    record.attempts += 1;
-    if (record.otp !== enteredOtp.trim()) {
+  // If no OTP is supplied, only confirm that an active record exists.
+  if (!enteredOtp) {
+    return {
+      valid: true,
+      message: "Verification request is active.",
+      userId: record.userId,
+      userEmail: record.identifier,
+    };
+  }
+
+  const normalizedOtp = enteredOtp.trim();
+
+  // Count every verification attempt.
+  record.attempts += 1;
+
+  // Constant-time comparison avoids directly comparing secrets.
+  const expectedOtp = Buffer.from(record.otp);
+  const providedOtp = Buffer.from(normalizedOtp);
+
+  const otpMatches =
+    expectedOtp.length === providedOtp.length &&
+    crypto.timingSafeEqual(expectedOtp, providedOtp);
+
+  if (!otpMatches) {
+    if (record.attempts >= 5) {
+      store.delete(record.identifier);
+      store.delete(record.token);
+
       return {
         valid: false,
-        message: "Incorrect verification code. Please check and try again.",
+        message:
+          "Too many incorrect attempts. Please request a new verification code.",
       };
     }
+
+    return {
+      valid: false,
+      message:
+        "Incorrect verification code. Please check and try again.",
+    };
   }
 
   return {
@@ -109,12 +176,18 @@ export function verifyOTP(
   };
 }
 
-export function clearVerification(identifierOrToken: string) {
+/**
+ * Clear a password recovery verification record.
+ */
+export function clearVerification(identifierOrToken: string): void {
   const key = identifierOrToken.toLowerCase().trim();
   const record = store.get(key);
+
   if (record) {
     store.delete(record.identifier);
     store.delete(record.token);
+    return;
   }
+
   store.delete(key);
 }

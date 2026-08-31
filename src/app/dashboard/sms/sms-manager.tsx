@@ -22,7 +22,7 @@ import {
   toggleSmsAction,
   sendTestSmsAction,
   initiateBkashTopupAction,
-  manualConfirmBkashTopupAction,
+
 } from "@/lib/actions/sms";
 import { SMS_PRICING_TIERS } from "@/lib/sms-pricing";
 
@@ -67,8 +67,7 @@ export default function SmsManager({
   const [testPhone, setTestPhone] = useState(doctorPhone || "");
   const [showTopup, setShowTopup] = useState(false);
   const [selectedTier, setSelectedTier] = useState<{ credits: number; priceBdt: number; label: string } | null>(null);
-  const [showManualConfirm, setShowManualConfirm] = useState(false);
-  const [manualTrxId, setManualTrxId] = useState("");
+  
 
   // Check bKash return URL
   useEffect(() => {
@@ -141,25 +140,7 @@ export default function SmsManager({
     });
   }
 
-  function handleManualConfirm() {
-    if (!selectedTier || !manualTrxId) return;
-    startTransition(async () => {
-      const result = await manualConfirmBkashTopupAction({
-        trxId: manualTrxId,
-        credits: selectedTier.credits,
-        costBdt: selectedTier.priceBdt,
-      });
-      if (result.success) {
-        showMessage("success", result.message);
-        setShowManualConfirm(false);
-        setManualTrxId("");
-        setSelectedTier(null);
-        setTimeout(() => window.location.reload(), 1500);
-      } else {
-        showMessage("error", result.message);
-      }
-    });
-  }
+ 
 
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
@@ -394,40 +375,7 @@ export default function SmsManager({
                   </button>
                 </div>
 
-                {/* Manual confirmation fallback */}
-                <div className="pt-3 border-t border-pink-200">
-                  <button
-                    type="button"
-                    onClick={() => setShowManualConfirm(!showManualConfirm)}
-                    className="text-[11px] font-semibold text-pink-700 hover:underline"
-                  >
-                    {showManualConfirm ? "− Hide" : "+ Already paid via bKash? Add credits manually"}
-                  </button>
-
-                  {showManualConfirm && (
-                    <div className="mt-2 space-y-2">
-                      <p className="text-[10px] text-slate-600 italic">
-                        If you already paid but credits didn&apos;t show up, enter your bKash Transaction ID below.
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={manualTrxId}
-                          onChange={(e) => setManualTrxId(e.target.value.toUpperCase())}
-                          placeholder="bKash TrxID (e.g. 8N5K2P3M4Q)"
-                          className="flex-1 rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-mono focus:border-pink-500 focus:outline-none uppercase"
-                        />
-                        <button
-                          onClick={handleManualConfirm}
-                          disabled={isPending || !manualTrxId}
-                          className="rounded-2xl bg-pink-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-pink-700 transition disabled:opacity-60"
-                        >
-                          Confirm
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                
               </div>
             )}
           </div>

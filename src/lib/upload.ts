@@ -1,30 +1,51 @@
 export async function uploadImageToHosting(
   file: File | Blob | Buffer,
   customFilename?: string
-): Promise<{ success: boolean; url: string; thumbnailUrl?: string; filename: string }> {
-  const apiUrl =
-    process.env.IMAGE_HOSTING_API_URL ||
-    "https://pic.thewebpal.com/p/api/upload.php";
-  const apiKey =
-    process.env.IMAGE_HOSTING_API_KEY ||
-    "3LRC_6_aQ9Ci_gAJAWkfardE77SwHhzfYW1k7HWVXjU";
+): Promise<{
+  success: boolean;
+  url: string;
+  thumbnailUrl?: string;
+  filename: string;
+}> {
+  const apiUrl = process.env.IMAGE_HOSTING_API_URL;
+  const apiKey = process.env.IMAGE_HOSTING_API_KEY;
+
+  if (!apiUrl) {
+    throw new Error("Missing required environment variable: IMAGE_HOSTING_API_URL");
+  }
+
+  if (!apiKey) {
+    throw new Error("Missing required environment variable: IMAGE_HOSTING_API_KEY");
+  }
 
   const formData = new FormData();
 
   if (Buffer.isBuffer(file)) {
     const uint8 = new Uint8Array(file);
     const blob = new Blob([uint8]);
-    formData.append("image", blob, customFilename || "image.jpg");
+
+    formData.append(
+      "image",
+      blob,
+      customFilename || "image.jpg"
+    );
   } else if (file instanceof Blob && !(file instanceof File)) {
-    formData.append("image", file, customFilename || "image.jpg");
+    formData.append(
+      "image",
+      file,
+      customFilename || "image.jpg"
+    );
   } else {
     formData.append("image", file);
   }
 
   if (customFilename) {
-    // Sanitized alphanumeric filename
-    const cleanName = customFilename.replace(/[^a-zA-Z0-9_-]/g, "-");
-    formData.append("filename", cleanName);
+    const cleanName = customFilename
+      .replace(/[^a-zA-Z0-9_-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    formData.append("filename", cleanName || `user-avatar-${Date.now()}`);
   } else {
     formData.append("filename", `user-avatar-${Date.now()}`);
   }
@@ -39,12 +60,18 @@ export async function uploadImageToHosting(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Upload API returned ${res.status}: ${errText}`);
+
+    throw new Error(
+      `Upload API returned ${res.status}: ${errText}`
+    );
   }
 
   const data = await res.json();
+
   if (!data.success || !data.url) {
-    throw new Error(data.message || "Failed to upload image to hosting server.");
+    throw new Error(
+      data.message || "Failed to upload image to hosting server."
+    );
   }
 
   return {
