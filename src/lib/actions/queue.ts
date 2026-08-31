@@ -13,6 +13,7 @@ import {
   getAvailableSlots,
   getNextAvailableDates,
 } from "../schedule-generator";
+import { getDhakaDateString } from "../timezone";
 import {
   calculateQueueEstimates,
   cancelAppointment,
@@ -425,10 +426,19 @@ export async function getQueueForDateAction(date: string) {
     doctorId = receptionist.doctorId;
   }
 
-  const targetDate = new Date(date);
+  const targetDate = new Date(`${date}T00:00:00.000Z`);
   const slots = await prisma.scheduleSlot.findMany({
     where: { doctorId, slotDate: targetDate },
     include: {
+      facility: {
+        include: {
+          upazila: {
+            include: {
+              district: true,
+            },
+          },
+        },
+      },
       appointment: {
         include: {
           patient: { select: { id: true, name: true, phone: true, image: true } },
@@ -459,9 +469,10 @@ export async function getUpcomingDatesAction() {
     doctorId = receptionist.doctorId;
   }
 
-  const today = new Date();
-  const future = new Date();
-  future.setDate(today.getDate() + 30);
+  const todayStr = getDhakaDateString(new Date());
+  const today = new Date(`${todayStr}T00:00:00.000Z`);
+  const future = new Date(today);
+  future.setUTCDate(today.getUTCDate() + 30);
 
   const slots = await prisma.scheduleSlot.findMany({
     where: {
@@ -473,10 +484,7 @@ export async function getUpcomingDatesAction() {
     orderBy: { slotDate: "asc" },
   });
 
-  return slots.map((s) => {
-    const d = s.slotDate;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
+  return slots.map((s) => getDhakaDateString(s.slotDate));
 }
 
 export async function startNextPatientAction() {

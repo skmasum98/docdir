@@ -461,6 +461,12 @@ export default async function DoctorPage({ params }: Props) {
                   userLoggedIn={Boolean(session?.user)}
                   userName={session?.user?.name || undefined}
                   userEmail={session?.user?.email || undefined}
+                  userPhone={(session?.user as any)?.phone || undefined}
+                  hospitalName={doctor.hospitalName || undefined}
+                  chamberAddress={doctor.chamberAddress || undefined}
+                  city={doctor.city || undefined}
+                  area={doctor.area || undefined}
+                  appointmentPhone={appointmentPhone || undefined}
                 />
 
                 {appointmentPhone ? (

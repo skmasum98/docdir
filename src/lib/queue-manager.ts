@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import type { Appointment } from "@prisma/client";
+import { getDhakaDateString } from "./timezone";
 
 /**
  * Calculate estimated appointment times for all bookings on a given date
@@ -12,7 +13,8 @@ import type { Appointment } from "@prisma/client";
  * 4. Account for COMPLETED appointments (subtract their actual duration)
  */
 export async function calculateQueueEstimates(doctorId: number, date: Date): Promise<void> {
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dateStr = getDhakaDateString(date);
+  const dateOnly = new Date(`${dateStr}T00:00:00.000Z`);
 
   const doctor = await prisma.doctor.findUnique({
     where: { id: doctorId },
@@ -73,7 +75,8 @@ export async function getQueueInfo(appointmentId: number): Promise<{
   if (!appt) return null;
 
   // Get all active appointments for the same doctor on the same date
-  const dateOnly = new Date(appt.slot.slotDate);
+  const dateStr = getDhakaDateString(appt.slot.slotDate);
+  const dateOnly = new Date(`${dateStr}T00:00:00.000Z`);
   const activeAppts = await prisma.appointment.findMany({
     where: {
       doctorId: appt.doctorId,
@@ -108,7 +111,8 @@ export async function getQueueInfo(appointmentId: number): Promise<{
  * Called when doctor starts seeing a patient.
  */
 export async function startNextAppointment(doctorId: number, date: Date): Promise<Appointment | null> {
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dateStr = getDhakaDateString(date);
+  const dateOnly = new Date(`${dateStr}T00:00:00.000Z`);
 
   // Mark any currently in-progress appointment as completed
   await prisma.appointment.updateMany({

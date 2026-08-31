@@ -16,6 +16,8 @@ import {
   Users,
   ArrowRight,
   Ban,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { cancelAppointmentAction } from "@/lib/actions/queue";
 
@@ -34,6 +36,11 @@ interface Appointment {
     slug: string;
     specialty: { name: string } | null;
     profilePhoto: string | null;
+    hospitalName?: string | null;
+    chamberAddress?: string | null;
+    city?: string | null;
+    area?: string | null;
+    appointmentPhone?: string | null;
   };
   slot: {
     id: number;
@@ -41,6 +48,17 @@ interface Appointment {
     startTime: string;
     endTime: string;
     serialNumber: number;
+    facility?: {
+      id: number;
+      name: string;
+      type: string;
+      address?: string | null;
+      phone?: string | null;
+      upazila?: {
+        name: string;
+        district?: { name: string } | null;
+      } | null;
+    } | null;
   };
   queueInfo: {
     position: number;
@@ -287,6 +305,25 @@ export default function PatientAppointmentsView({
                           </span>
                         )}
                       </p>
+
+                      {/* Chamber / Location Details */}
+                      {(appt.slot.facility || appt.doctor.hospitalName || appt.doctor.chamberAddress) && (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 pt-0.5">
+                          {(appt.slot.facility?.name || appt.doctor.hospitalName) && (
+                            <span className="inline-flex items-center gap-1 font-medium text-slate-700">
+                              <Building2 className="h-3 w-3 text-indigo-600 shrink-0" />
+                              {appt.slot.facility?.name || appt.doctor.hospitalName}
+                            </span>
+                          )}
+                          {(appt.slot.facility?.address || appt.doctor.chamberAddress) && (
+                            <span className="inline-flex items-center gap-1 text-slate-600">
+                              <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                              {appt.slot.facility?.address || appt.doctor.chamberAddress}
+                              {appt.doctor.city && !appt.slot.facility?.address && `, ${appt.doctor.city}`}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

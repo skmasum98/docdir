@@ -63,15 +63,7 @@ export async function createSlotsForDate(input: CreateSlotInput): Promise<{
   }
 
   // Parse date as Dhaka date
-  const targetDateUTC = dhakaDateToUTC(input.date);
-
-  // Create a "schedule block" record to group slots
-  // We use a placeholder Schedule (since we already have one). Better: create a ScheduleSlotGroup.
-  // For simplicity, we'll create slots directly and use slotDate to group.
-  // But we need notes per block. Let me use the Schedule model as a "block" with single date effectiveFrom.
-
-  // Actually, simpler: use the existing Schedule model as a one-time block.
-  // Each "block" = one Schedule with specific date range.
+  const targetDateUTC = new Date(`${input.date}T00:00:00.000Z`);
 
   // Insert one "Schedule" record as a one-time block
   const schedule = await prisma.schedule.create({
@@ -97,14 +89,19 @@ export async function createSlotsForDate(input: CreateSlotInput): Promise<{
     const slotStartMin = startMinutes + i * input.slotDuration;
     const slotEndMin = slotStartMin + input.slotDuration;
 
-    const startTimeStr = `${input.date}T${String(Math.floor(slotStartMin / 60)).padStart(2, "0")}:${String(slotStartMin % 60).padStart(2, "0")}:00+06:00`;
-    const endTimeStr = `${input.date}T${String(Math.floor(slotEndMin / 60)).padStart(2, "0")}:${String(slotEndMin % 60).padStart(2, "0")}:00+06:00`;
+    const startH = String(Math.floor(slotStartMin / 60)).padStart(2, "0");
+    const startM = String(slotStartMin % 60).padStart(2, "0");
+    const endH = String(Math.floor(slotEndMin / 60)).padStart(2, "0");
+    const endM = String(slotEndMin % 60).padStart(2, "0");
+
+    const startTimeStr = `${input.date}T${startH}:${startM}:00+06:00`;
+    const endTimeStr = `${input.date}T${endH}:${endM}:00+06:00`;
 
     slots.push({
       scheduleId: schedule.id,
       doctorId: input.doctorId,
       facilityId: input.facilityId || null,
-      slotDate: new Date(input.date),
+      slotDate: targetDateUTC,
       startTime: new Date(startTimeStr),
       endTime: new Date(endTimeStr),
       serialNumber: i + 1,
@@ -246,7 +243,23 @@ export async function getDoctorScheduleBlocks(doctorId: number) {
     where: { doctorId },
     orderBy: [{ effectiveFrom: "asc" }, { startTime: "asc" }],
     include: {
-      facility: { select: { id: true, name: true } },
+      facility: {
+        include: {
+          upazila: {
+            include: {
+              district: true,
+            },
+          },
+        },
+      },
+      doctor: {
+        select: {
+          hospitalName: true,
+          chamberAddress: true,
+          city: true,
+          area: true,
+        },
+      },
       _count: { select: { slots: true } },
     },
   });
@@ -264,13 +277,29 @@ export async function getScheduleBlocksInRange(
     where: {
       doctorId,
       effectiveFrom: {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        gte: new Date(`${startDate}T00:00:00.000Z`),
+        lte: new Date(`${endDate}T23:59:59.999Z`),
       },
     },
     orderBy: { effectiveFrom: "asc" },
     include: {
-      facility: { select: { id: true, name: true } },
+      facility: {
+        include: {
+          upazila: {
+            include: {
+              district: true,
+            },
+          },
+        },
+      },
+      doctor: {
+        select: {
+          hospitalName: true,
+          chamberAddress: true,
+          city: true,
+          area: true,
+        },
+      },
       _count: { select: { slots: true } },
     },
   });
@@ -280,11 +309,39 @@ export async function getScheduleBlocksInRange(
  * Get available slots for a doctor on a given date (in Dhaka timezone)
  */
 export async function getAvailableSlots(doctorId: number, date: string) {
+  const targetDate = new Date(`${date}T00:00:00.000Z`);
   return prisma.scheduleSlot.findMany({
     where: {
       doctorId,
-      slotDate: new Date(date),
+      slotDate: targetDate,
       status: "AVAILABLE",
+    },
+    include: {
+      facility: {
+        include: {
+          upazila: {
+            include: {
+              district: true,
+            },
+          },
+        },
+      },
+      doctor: {
+        select: {
+          hospitalName: true,
+          chamberAddress: true,
+          city: true,
+          area: true,
+          appointmentPhone: true,
+          phone: true,
+        },
+      },
+      schedule: {
+        select: {
+          notes: true,
+          isActive: true,
+        },
+      },
     },
     orderBy: { startTime: "asc" },
   });
@@ -294,20 +351,21 @@ export async function getAvailableSlots(doctorId: number, date: string) {
  * Get the next available dates for a doctor (next N days that have slots)
  */
 export async function getNextAvailableDates(doctorId: number, daysAhead: number = 30): Promise<string[]> {
-  const datesSet = new Set<string>();
-  const today = new Date();
+  const datesArray: Date[] = [];
+  const todayStr = getDhakaDateString(new Date());
+  const startDay = new Date(`${todayStr}T00:00:00.000Z`);
 
   for (let i = 0; i < daysAhead; i++) {
-    const future = new Date(today);
-    future.setUTCDate(today.getUTCDate() + i);
-    datesSet.add(getDhakaDateString(future));
+    const d = new Date(startDay);
+    d.setUTCDate(startDay.getUTCDate() + i);
+    datesArray.push(d);
   }
 
   const slots = await prisma.scheduleSlot.findMany({
     where: {
       doctorId,
       slotDate: {
-        in: Array.from(datesSet).map((d) => new Date(d)),
+        in: datesArray,
       },
       status: "AVAILABLE",
     },

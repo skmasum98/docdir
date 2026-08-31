@@ -319,13 +319,13 @@ export default function QueueManager({
                   }`}
                 >
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
+                    {formatDhakaDate(date, { weekday: "short" })}
                   </p>
                   <p className="text-base font-bold text-slate-900 mt-0.5">
-                    {new Date(date).getDate()}
+                    {formatDhakaDate(date, { day: "numeric" })}
                   </p>
                   <p className="text-[10px] text-slate-500 mt-0.5">
-                    {new Date(date).toLocaleDateString("en-US", { month: "short" })}
+                    {formatDhakaDate(date, { month: "short" })}
                   </p>
                   {isToday && (
                     <span className="inline-block mt-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">

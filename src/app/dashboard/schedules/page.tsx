@@ -50,7 +50,7 @@ export default async function SchedulesPage() {
         { doctorFacilities: { some: { doctorId } } },
       ],
     },
-    select: { id: true, name: true, type: true },
+    select: { id: true, name: true, type: true, address: true },
     orderBy: { name: "asc" },
   });
 

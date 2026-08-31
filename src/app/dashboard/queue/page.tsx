@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getDhakaDateString, getTodayDhaka } from "@/lib/timezone";
+import { getDhakaDateString, getTodayDhaka, dhakaDateToUTC } from "@/lib/timezone";
 import QueueManager from "./queue-manager";
 
 export const metadata = {
@@ -38,11 +38,11 @@ export default async function QueuePage() {
 
   // Get today in Dhaka
   const todayDhaka = getTodayDhaka();
-  const todayDate = new Date(todayDhaka);
+  const todayDate = dhakaDateToUTC(todayDhaka);
 
   // Get all upcoming dates (today + next 30 days) that have slots
   const future = new Date(todayDate);
-  future.setDate(future.getDate() + 30);
+  future.setUTCDate(future.getUTCDate() + 30);
 
   const upcomingSlots = await prisma.scheduleSlot.findMany({
     where: {
@@ -54,11 +54,7 @@ export default async function QueuePage() {
     orderBy: { slotDate: "asc" },
   });
 
-  const availableDates = upcomingSlots.map((s) => {
-    // slotDate is stored as UTC date - use it directly
-    const d = new Date(s.slotDate);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
+  const availableDates = upcomingSlots.map((s) => getDhakaDateString(s.slotDate));
 
   // Get today's slots
   const todaySlots = await prisma.scheduleSlot.findMany({

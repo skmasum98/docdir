@@ -14,9 +14,11 @@ import {
   ArrowRight,
   Loader2,
   MessageSquare,
-  Stethoscope,
+  MapPin,
+  Building2,
 } from "lucide-react";
 import { getAvailableDatesAction, getAvailableSlotsAction, bookAppointmentAction } from "@/lib/actions/queue";
+import { formatDhakaDate, formatDhakaTime } from "@/lib/timezone";
 
 interface BookingModalProps {
   doctorId: number;
@@ -27,6 +29,36 @@ interface BookingModalProps {
   userName?: string;
   userEmail?: string;
   userPhone?: string;
+  hospitalName?: string;
+  chamberAddress?: string;
+  city?: string;
+  area?: string;
+  appointmentPhone?: string;
+}
+
+interface AvailableSlotItem {
+  id: number;
+  serialNumber: number;
+  startTime: string;
+  endTime: string;
+  facility?: {
+    id: number;
+    name: string;
+    type: string;
+    address?: string | null;
+    phone?: string | null;
+    upazila?: {
+      name: string;
+      district?: { name: string } | null;
+    } | null;
+  } | null;
+  doctor?: {
+    hospitalName?: string | null;
+    chamberAddress?: string | null;
+    city?: string | null;
+    area?: string | null;
+    appointmentPhone?: string | null;
+  } | null;
 }
 
 export default function BookingModal({
@@ -38,6 +70,11 @@ export default function BookingModal({
   userName,
   userEmail,
   userPhone,
+  hospitalName,
+  chamberAddress,
+  city,
+  area,
+  appointmentPhone,
 }: BookingModalProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -48,7 +85,7 @@ export default function BookingModal({
   // Form state
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [availableSlots, setAvailableSlots] = useState<Array<{ id: number; serialNumber: number; startTime: string }>>([]);
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlotItem[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [patientName, setPatientName] = useState(userName || "");
   const [patientPhone, setPatientPhone] = useState(userPhone || "");
@@ -59,32 +96,59 @@ export default function BookingModal({
 
   // Load available dates when modal opens
   useEffect(() => {
-    if (isOpen && availableDates.length === 0) {
-      getAvailableDatesAction(doctorId).then((dates) => {
-        setAvailableDates(dates);
-        setLoadingDates(false);
-      }).catch(() => {
-        setLoadingDates(false);
+    if (!isOpen) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setLoadingDates(true);
+    });
+
+    getAvailableDatesAction(doctorId)
+      .then((dates) => {
+        if (!cancelled) {
+          setAvailableDates(dates);
+          setLoadingDates(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadingDates(false);
       });
-    }
-  }, [isOpen, doctorId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, doctorId]);
 
   // Load slots when date selected
   useEffect(() => {
-    if (selectedDate) {
-      getAvailableSlotsAction(doctorId, selectedDate).then((slots) => {
-        setAvailableSlots(
-          slots.map((s) => ({
-            id: s.id,
-            serialNumber: s.serialNumber,
-            startTime: s.startTime.toISOString(),
-          }))
-        );
-        setLoadingSlots(false);
-      }).catch(() => {
-        setLoadingSlots(false);
+    if (!selectedDate) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setLoadingSlots(true);
+    });
+
+    getAvailableSlotsAction(doctorId, selectedDate)
+      .then((slots) => {
+        if (!cancelled) {
+          setAvailableSlots(
+            slots.map((s: any) => ({
+              id: s.id,
+              serialNumber: s.serialNumber,
+              startTime: typeof s.startTime === "string" ? s.startTime : s.startTime.toISOString(),
+              endTime: typeof s.endTime === "string" ? s.endTime : s.endTime.toISOString(),
+              facility: s.facility || null,
+              doctor: s.doctor || null,
+            }))
+          );
+          setLoadingSlots(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadingSlots(false);
       });
-    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDate, doctorId]);
 
   function reset() {
@@ -134,30 +198,53 @@ export default function BookingModal({
     });
   }
 
-  function formatDate(dateStr: string): string {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    });
-  }
-
-  function formatTime(isoString: string): string {
-    return new Date(isoString).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  }
-
   const selectedSlot = availableSlots.find((s) => s.id === selectedSlotId);
+
+  // Helper to resolve slot's chamber name
+  function getSlotChamberName(slot?: AvailableSlotItem): string {
+    if (slot?.facility?.name) return slot.facility.name;
+    if (slot?.doctor?.hospitalName) return slot.doctor.hospitalName;
+    if (hospitalName) return hospitalName;
+    return "Doctor's Chamber";
+  }
+
+  // Helper to resolve slot's chamber address
+  function getSlotChamberAddress(slot?: AvailableSlotItem): string {
+    if (slot?.facility?.address) {
+      const parts = [
+        slot.facility.address,
+        slot.facility.upazila?.name,
+        slot.facility.upazila?.district?.name,
+      ].filter(Boolean);
+      return parts.join(", ");
+    }
+    if (slot?.doctor?.chamberAddress) {
+      const parts = [
+        slot.doctor.chamberAddress,
+        slot.doctor.area,
+        slot.doctor.city,
+      ].filter(Boolean);
+      return parts.join(", ");
+    }
+    if (chamberAddress) {
+      const parts = [chamberAddress, area, city].filter(Boolean);
+      return parts.join(", ");
+    }
+    if (city || area) {
+      return [area, city].filter(Boolean).join(", ");
+    }
+    return "Chamber address available on appointment confirmation";
+  }
+
+  // Default chamber info for current selection
+  const currentChamberName = getSlotChamberName(selectedSlot || availableSlots[0]);
+  const currentChamberAddress = getSlotChamberAddress(selectedSlot || availableSlots[0]);
 
   return (
     <>
       <button
         onClick={handleOpen}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition shadow-sm w-full sm:w-auto"
+        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition shadow-sm w-full sm:w-auto cursor-pointer"
       >
         <Calendar className="h-4 w-4" />
         Book Serial Online
@@ -185,7 +272,7 @@ export default function BookingModal({
                 </div>
                 <button
                   onClick={handleClose}
-                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
@@ -229,7 +316,7 @@ export default function BookingModal({
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 mb-1">Choose Date</h3>
-                    <p className="text-xs text-slate-500">Select an available day to see times</p>
+                    <p className="text-xs text-slate-500">Select an available day to see chamber slots</p>
                   </div>
 
                   {loadingDates ? (
@@ -241,8 +328,13 @@ export default function BookingModal({
                       <Calendar className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                       <p className="text-sm font-semibold text-slate-700">No available dates</p>
                       <p className="text-xs text-slate-500 mt-1">
-                        This doctor hasn&apos;t published any schedules yet. Please check back later or call the chamber.
+                        This doctor hasn&apos;t published any open schedules yet. Please check back later or call the chamber.
                       </p>
+                      {appointmentPhone && (
+                        <p className="text-xs font-semibold text-indigo-700 mt-3">
+                          Chamber Hotline: {appointmentPhone}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -260,13 +352,13 @@ export default function BookingModal({
                           }`}
                         >
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                            {new Date(date).toLocaleDateString("en-US", { weekday: "short" })}
+                            {formatDhakaDate(new Date(`${date}T00:00:00.000Z`), { weekday: "short" })}
                           </p>
                           <p className="text-base font-bold text-slate-900 mt-0.5">
-                            {new Date(date).getDate()}
+                            {formatDhakaDate(new Date(`${date}T00:00:00.000Z`), { day: "numeric" })}
                           </p>
                           <p className="text-[10px] text-slate-500 mt-0.5">
-                            {new Date(date).toLocaleDateString("en-US", { month: "short" })}
+                            {formatDhakaDate(new Date(`${date}T00:00:00.000Z`), { month: "short" })}
                           </p>
                         </button>
                       ))}
@@ -275,22 +367,34 @@ export default function BookingModal({
                 </div>
               )}
 
-              {/* STEP 2: Choose Time */}
+              {/* STEP 2: Choose Time & View Chamber Address */}
               {step === 2 && (
                 <div className="space-y-4">
                   <div>
                     <button
                       onClick={() => setStep(1)}
-                      className="text-xs font-semibold text-indigo-600 hover:underline mb-2"
+                      className="text-xs font-semibold text-indigo-600 hover:underline mb-2 cursor-pointer"
                     >
                       ← Change date
                     </button>
                     <h3 className="text-sm font-bold text-slate-900">
-                      Choose Time — {selectedDate && formatDate(selectedDate)}
+                      Choose Time — {selectedDate && formatDhakaDate(new Date(`${selectedDate}T00:00:00.000Z`), { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Select an available serial
+                      Select an available serial for consultation
                     </p>
+                  </div>
+
+                  {/* Chamber Address Box */}
+                  <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-blue-50/50 p-4 space-y-1.5">
+                    <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs">
+                      <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <span>{currentChamberName}</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-slate-600 text-xs pl-0.5">
+                      <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">{currentChamberAddress}</span>
+                    </div>
                   </div>
 
                   {loadingSlots ? (
@@ -301,6 +405,7 @@ export default function BookingModal({
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
                       <Clock className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                       <p className="text-sm font-semibold text-slate-700">No slots available on this date</p>
+                      <p className="text-xs text-slate-500 mt-1">Please select another date from the calendar.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -318,11 +423,16 @@ export default function BookingModal({
                           }`}
                         >
                           <p className="text-xs font-bold text-slate-900">
-                            {formatTime(slot.startTime)}
+                            {formatDhakaTime(slot.startTime)}
                           </p>
-                          <p className="text-[10px] text-slate-500 mt-0.5">
+                          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
                             Serial #{slot.serialNumber}
                           </p>
+                          {slot.facility?.name && slot.facility.name !== currentChamberName && (
+                            <p className="text-[9px] text-indigo-600 truncate mt-1">
+                              {slot.facility.name}
+                            </p>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -336,20 +446,57 @@ export default function BookingModal({
                   <div>
                     <button
                       onClick={() => setStep(2)}
-                      className="text-xs font-semibold text-indigo-600 hover:underline mb-2"
+                      className="text-xs font-semibold text-indigo-600 hover:underline mb-2 cursor-pointer"
                       type="button"
                     >
                       ← Change time
                     </button>
 
-                    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-3.5 mb-4">
-                      <p className="text-xs text-slate-600">Your appointment</p>
-                      <p className="text-sm font-bold text-slate-900">
-                        {doctorName} • {selectedDate && formatDate(selectedDate)} • {selectedSlot && formatTime(selectedSlot.startTime)}
-                      </p>
-                      <p className="text-xs text-indigo-700 font-semibold mt-0.5">
-                        Serial #{selectedSlot?.serialNumber}
-                      </p>
+                    {/* Rich Appointment & Chamber Summary Card */}
+                    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+                            Appointment Summary
+                          </p>
+                          <p className="text-sm font-bold text-slate-900 mt-0.5">
+                            {doctorName} {specialty ? `(${specialty})` : ""}
+                          </p>
+                        </div>
+                        <span className="rounded-xl bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white shadow-xs">
+                          Serial #{selectedSlot?.serialNumber}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                          <span>{selectedDate && formatDhakaDate(new Date(`${selectedDate}T00:00:00.000Z`), { weekday: "short", day: "numeric", month: "short" })}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                          <span>{selectedSlot && formatDhakaTime(selectedSlot.startTime)}</span>
+                        </div>
+                      </div>
+
+                      {/* Chamber Location in Summary */}
+                      <div className="pt-2 border-t border-indigo-100 space-y-1">
+                        <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <Building2 className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                          {getSlotChamberName(selectedSlot)}
+                        </p>
+                        <p className="text-[11px] text-slate-600 flex items-start gap-1.5 pl-0.5">
+                          <MapPin className="h-3 w-3 text-slate-400 shrink-0 mt-0.5" />
+                          <span>{getSlotChamberAddress(selectedSlot)}</span>
+                        </p>
+                      </div>
+
+                      {consultationFee && (
+                        <div className="pt-1 text-[11px] text-indigo-900 font-semibold flex justify-between">
+                          <span>Consultation Fee:</span>
+                          <span>৳{consultationFee}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -357,7 +504,7 @@ export default function BookingModal({
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-700">
                         <User className="inline h-3 w-3 mr-1" />
-                        Full Name
+                        Patient Full Name
                       </label>
                       <input
                         type="text"
@@ -370,7 +517,7 @@ export default function BookingModal({
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-700">
                         <Phone className="inline h-3 w-3 mr-1" />
-                        Phone Number
+                        Phone Number (for SMS confirmation)
                       </label>
                       <input
                         type="tel"
@@ -390,19 +537,20 @@ export default function BookingModal({
                         type="email"
                         value={patientEmail}
                         onChange={(e) => setPatientEmail(e.target.value)}
+                        placeholder="your@email.com"
                         className="w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:outline-none"
                       />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-700">
                         <MessageSquare className="inline h-3 w-3 mr-1" />
-                        Chief Complaint (Optional)
+                        Chief Complaint / Symptoms (Optional)
                       </label>
                       <textarea
                         value={chiefComplaint}
                         onChange={(e) => setChiefComplaint(e.target.value)}
                         rows={2}
-                        placeholder="Briefly describe your symptoms..."
+                        placeholder="Briefly describe your symptoms or reason for visit..."
                         className="w-full rounded-2xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-indigo-500 focus:outline-none resize-none"
                       />
                     </div>
@@ -411,12 +559,12 @@ export default function BookingModal({
                   <button
                     type="submit"
                     disabled={isPending || !patientName.trim() || !patientPhone.trim()}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition shadow-sm disabled:opacity-60"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white hover:bg-indigo-700 transition shadow-sm disabled:opacity-60 cursor-pointer"
                   >
                     {isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Booking...
+                        Booking Serial...
                       </>
                     ) : (
                       <>
@@ -437,13 +585,42 @@ export default function BookingModal({
                   <div>
                     <h3 className="text-base sm:text-lg font-bold text-slate-900">Booking Confirmed!</h3>
                     <p className="text-sm text-slate-600 mt-1">
-                      Your serial is locked. We&apos;ll send you a confirmation email and you can check live queue position from your account.
+                      Your serial is confirmed. You can track your live queue position and estimated visit time in real-time.
                     </p>
                   </div>
+
+                  {/* Confirmed Details Badge */}
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-left space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-emerald-900">Doctor</span>
+                      <span className="text-xs font-bold text-slate-900">{doctorName}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-emerald-900">Serial Number</span>
+                      <span className="text-sm font-bold text-indigo-700">#{selectedSlot?.serialNumber}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-emerald-900">Date & Time</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {selectedDate && formatDhakaDate(new Date(`${selectedDate}T00:00:00.000Z`), { weekday: "short", day: "numeric", month: "short" })} • {selectedSlot && formatDhakaTime(selectedSlot.startTime)}
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t border-emerald-200/60">
+                      <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                        {getSlotChamberName(selectedSlot)}
+                      </p>
+                      <p className="text-[11px] text-slate-600 flex items-start gap-1.5 mt-0.5">
+                        <MapPin className="h-3 w-3 text-slate-400 shrink-0 mt-0.5" />
+                        <span>{getSlotChamberAddress(selectedSlot)}</span>
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <button
                       onClick={handleClose}
-                      className="flex-1 rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      className="flex-1 rounded-2xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                     >
                       Close
                     </button>
@@ -451,7 +628,7 @@ export default function BookingModal({
                       href="/dashboard/appointments"
                       className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition"
                     >
-                      View My Appointments
+                      View Live Queue
                     </a>
                   </div>
                 </div>

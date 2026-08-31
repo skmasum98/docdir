@@ -23,9 +23,32 @@ export default async function PatientAppointmentsPage() {
           slug: true,
           specialty: { select: { name: true } },
           profilePhoto: true,
+          hospitalName: true,
+          chamberAddress: true,
+          city: true,
+          area: true,
+          appointmentPhone: true,
         },
       },
-      slot: true,
+      slot: {
+        include: {
+          facility: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              address: true,
+              phone: true,
+              upazila: {
+                select: {
+                  name: true,
+                  district: { select: { name: true } },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     orderBy: { slot: { slotDate: "desc" } },
     take: 50,

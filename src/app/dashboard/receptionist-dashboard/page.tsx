@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getTodayDhaka } from "@/lib/timezone";
+import { getTodayDhaka, dhakaDateToUTC, getDhakaDateString } from "@/lib/timezone";
 import QueueManager from "../queue/queue-manager";
 
 export const metadata = {
@@ -31,9 +31,8 @@ export default async function ReceptionistDashboardPage() {
   }
 
   const doctorId = receptionist.doctorId;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const todayDhaka = getTodayDhaka();
+  const today = dhakaDateToUTC(todayDhaka);
 
   // Get today's slots
   const slots = await prisma.scheduleSlot.findMany({
@@ -49,8 +48,8 @@ export default async function ReceptionistDashboardPage() {
   });
 
   // Get upcoming dates with slots
-  const future = new Date();
-  future.setDate(future.getDate() + 30);
+  const future = new Date(today);
+  future.setUTCDate(future.getUTCDate() + 30);
   const upcomingSlots = await prisma.scheduleSlot.findMany({
     where: {
       doctorId,
@@ -61,10 +60,7 @@ export default async function ReceptionistDashboardPage() {
     orderBy: { slotDate: "asc" },
   });
 
-  const availableDates = upcomingSlots.map((s) => {
-    const d = s.slotDate;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
+  const availableDates = upcomingSlots.map((s) => getDhakaDateString(s.slotDate));
 
   // Today's stats
   const totalSlots = slots.length;

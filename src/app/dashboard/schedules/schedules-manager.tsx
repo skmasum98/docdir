@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Calendar, Plus, Trash2, Clock, Users, AlertCircle, CheckCircle2, Building2, Ban, Edit, X, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Calendar, Plus, Trash2, Clock, Users, AlertCircle, CheckCircle2, Building2, Ban, Edit, X, ChevronLeft, ChevronRight, Eye, MapPin } from "lucide-react";
 import {
   createSlotBlockAction,
   updateScheduleBlockAction,
   deleteScheduleBlockAction,
   cancelScheduleBlockAction,
 } from "@/lib/actions/queue";
-import { formatDhakaDate, formatDhakaTime, getTodayDhaka, isTodayDhaka } from "@/lib/timezone";
+import { formatDhakaDate, formatDhakaTime, getTodayDhaka, isTodayDhaka, dhakaDateToUTC, getDhakaDateString } from "@/lib/timezone";
 
 interface ScheduleBlock {
   id: number;
@@ -21,7 +21,13 @@ interface ScheduleBlock {
   effectiveTo: string | null;
   isActive: boolean;
   notes: string | null;
-  facility: { id: number; name: string } | null;
+  facility: {
+    id: number;
+    name: string;
+    type?: string;
+    address?: string | null;
+    upazila?: { name: string; district?: { name: string } | null } | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
   _count?: { slots: number };
@@ -29,7 +35,7 @@ interface ScheduleBlock {
 
 interface SchedulesManagerProps {
   doctorId: number;
-  facilities: Array<{ id: number; name: string; type: string }>;
+  facilities: Array<{ id: number; name: string; type: string; address?: string | null }>;
   initialBlocks: ScheduleBlock[];
 }
 
@@ -168,23 +174,23 @@ export default function SchedulesManager({
     setChamberOff(!block.isActive);
   }
 
-  // Generate calendar days (30 days from calendarStart)
+  // Generate calendar days (14 days from calendarStart)
   function generateCalendarDays() {
     const days: Array<{ date: string; label: string; dayNum: number; isToday: boolean; hasBlock: boolean; block?: ScheduleBlock }> = [];
-    const start = new Date(calendarStart);
+    const start = dhakaDateToUTC(calendarStart);
 
     for (let i = 0; i < 14; i++) {
       const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      d.setUTCDate(start.getUTCDate() + i);
+      const dateStr = getDhakaDateString(d);
       const block = blocks.find(
         (b) => b.effectiveFrom.startsWith(dateStr)
       );
 
       days.push({
         date: dateStr,
-        label: d.toLocaleDateString("en-US", { weekday: "short" }),
-        dayNum: d.getDate(),
+        label: formatDhakaDate(d, { weekday: "short" }),
+        dayNum: Number(formatDhakaDate(d, { day: "numeric" })),
         isToday: isTodayDhaka(dateStr),
         hasBlock: !!block,
         block,
@@ -194,9 +200,9 @@ export default function SchedulesManager({
   }
 
   function navigateCalendar(direction: -1 | 1) {
-    const start = new Date(calendarStart);
-    start.setDate(start.getDate() + direction * 7);
-    setCalendarStart(`${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`);
+    const start = dhakaDateToUTC(calendarStart);
+    start.setUTCDate(start.getUTCDate() + direction * 7);
+    setCalendarStart(getDhakaDateString(start));
   }
 
   const calendarDays = generateCalendarDays();
@@ -576,9 +582,26 @@ export default function SchedulesManager({
               </div>
 
               {viewingBlock.facility && (
-                <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700">Location</p>
-                  <p className="text-sm font-bold text-blue-900 mt-1">{viewingBlock.facility.name}</p>
+                <div className="rounded-2xl bg-blue-50 border border-blue-200 p-3 space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700">Location / Chamber</p>
+                  <p className="text-sm font-bold text-blue-900 flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-blue-700 shrink-0" />
+                    {viewingBlock.facility.name}
+                  </p>
+                  {viewingBlock.facility.address && (
+                    <p className="text-xs text-blue-800 flex items-start gap-1 pl-0.5 mt-0.5">
+                      <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
+                      <span>
+                        {[
+                          viewingBlock.facility.address,
+                          viewingBlock.facility.upazila?.name,
+                          viewingBlock.facility.upazila?.district?.name,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </span>
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -751,6 +774,12 @@ export default function SchedulesManager({
                         <Building2 className="h-3 w-3" />
                         {block.facility.name}
                       </span>
+                      {block.facility.address && (
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-500">
+                          <MapPin className="h-3 w-3 text-slate-400" />
+                          {block.facility.address}
+                        </span>
+                      )}
                     </>
                   )}
                 </div>
