@@ -15,6 +15,7 @@ import {
   Hourglass,
   Users,
   ArrowRight,
+  ArrowLeft,
   Ban,
   Building2,
   MapPin,
@@ -172,12 +173,21 @@ export default function PatientAppointmentsView({
 
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-      <header>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Appointments</h1>
-        <p className="text-sm text-slate-600 mt-1">
-          View your bookings, see live queue position, and manage cancellations.
-        </p>
-      </header>
+      <div>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition mb-3"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+        <header>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Appointments</h1>
+          <p className="text-sm text-slate-600 mt-1">
+            View your bookings, see live queue position, and manage cancellations.
+          </p>
+        </header>
+      </div>
 
       {message && (
         <div

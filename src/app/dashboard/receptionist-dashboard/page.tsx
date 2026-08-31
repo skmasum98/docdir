@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTodayDhaka, dhakaDateToUTC, getDhakaDateString } from "@/lib/timezone";
@@ -169,9 +170,9 @@ export default async function ReceptionistDashboardPage() {
       <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 text-center text-sm text-slate-600">
         <p>
           💡 Need to manage schedules?{" "}
-          <a href="/dashboard/schedules" className="text-indigo-600 font-semibold hover:underline">
+          <Link href="/dashboard/schedules" className="text-indigo-600 font-semibold hover:underline">
             Go to Schedule Management
-          </a>
+          </Link>
         </p>
       </div>
     </main>

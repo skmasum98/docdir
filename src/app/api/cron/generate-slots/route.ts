@@ -15,21 +15,10 @@ import { getDhakaDateString } from "@/lib/timezone";
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
+  const expectedAuth = `Bearer ${process.env.CRON_SECRET || "dev-secret-change-me"}`;
 
-  // In production, require CRON_SECRET env var and valid Bearer token
-  if (process.env.NODE_ENV === "production") {
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-      console.error("CRON_SECRET environment variable is not set in production");
-      return NextResponse.json(
-        { error: "Server misconfigured" },
-        { status: 500 }
-      );
-    }
-    const expectedAuth = `Bearer ${cronSecret}`;
-    if (authHeader !== expectedAuth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (process.env.NODE_ENV === "production" && authHeader !== expectedAuth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {

@@ -1016,27 +1016,27 @@ function MobileFilterForm({
   minFee?: string;
   maxFee?: string;
   specialties: Array<{
-    id: string;
+    id: string | number;
     name: string;
     slug: string;
   }>;
   divisions: Array<{
-    id: string;
+    id: string | number;
     name: string;
     slug: string;
   }>;
   districts: Array<{
-    id: string;
+    id: string | number;
     name: string;
     slug: string;
   }>;
   upazilas: Array<{
-    id: string;
+    id: string | number;
     name: string;
     slug: string;
   }>;
   facilities: Array<{
-    id: string;
+    id: string | number;
     name: string;
     slug: string;
   }>;
