@@ -52,6 +52,13 @@ interface AvailableSlotItem {
       district?: { name: string } | null;
     } | null;
   } | null;
+  schedule?: {
+    id: number;
+    startTime: string;
+    endTime: string;
+    notes?: string | null;
+    slotDuration?: number;
+  } | null;
   doctor?: {
     hospitalName?: string | null;
     chamberAddress?: string | null;
@@ -59,6 +66,19 @@ interface AvailableSlotItem {
     area?: string | null;
     appointmentPhone?: string | null;
   } | null;
+}
+
+interface ChamberSlotGroup {
+  id: string;
+  facilityId: number | null;
+  scheduleId: number | null;
+  chamberName: string;
+  chamberType?: string;
+  address: string;
+  timeRange: string;
+  shiftLabel: string;
+  notes?: string | null;
+  slots: AvailableSlotItem[];
 }
 
 export default function BookingModal({
@@ -87,6 +107,7 @@ export default function BookingModal({
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [availableSlots, setAvailableSlots] = useState<AvailableSlotItem[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+  const [selectedChamberFilter, setSelectedChamberFilter] = useState<string>("all");
   const [patientName, setPatientName] = useState(userName || "");
   const [patientPhone, setPatientPhone] = useState(userPhone || "");
   const [patientEmail, setPatientEmail] = useState(userEmail || "");
@@ -123,7 +144,10 @@ export default function BookingModal({
     if (!selectedDate) return;
     let cancelled = false;
     queueMicrotask(() => {
-      if (!cancelled) setLoadingSlots(true);
+      if (!cancelled) {
+        setLoadingSlots(true);
+        setSelectedChamberFilter("all");
+      }
     });
 
     getAvailableSlotsAction(doctorId, selectedDate)
@@ -136,6 +160,7 @@ export default function BookingModal({
               startTime: typeof s.startTime === "string" ? s.startTime : s.startTime.toISOString(),
               endTime: typeof s.endTime === "string" ? s.endTime : s.endTime.toISOString(),
               facility: s.facility || null,
+              schedule: s.schedule || null,
               doctor: s.doctor || null,
             }))
           );
@@ -155,6 +180,7 @@ export default function BookingModal({
     setStep(1);
     setSelectedDate("");
     setSelectedSlotId(null);
+    setSelectedChamberFilter("all");
     setPatientName(userName || "");
     setPatientPhone(userPhone || "");
     setPatientEmail(userEmail || "");
@@ -236,9 +262,60 @@ export default function BookingModal({
     return "Chamber address available on appointment confirmation";
   }
 
-  // Default chamber info for current selection
-  const currentChamberName = getSlotChamberName(selectedSlot || availableSlots[0]);
-  const currentChamberAddress = getSlotChamberAddress(selectedSlot || availableSlots[0]);
+  // Group slots by chamber / shift session
+  const chamberGroups: ChamberSlotGroup[] = [];
+  const groupsMap = new Map<string, ChamberSlotGroup>();
+
+  for (const slot of availableSlots) {
+    const facilityId = slot.facility?.id ?? null;
+    const scheduleId = slot.schedule?.id ?? null;
+    const key = facilityId ? `fac-${facilityId}_sch-${scheduleId || "none"}` : `doc-chamber_sch-${scheduleId || "none"}`;
+
+    if (!groupsMap.has(key)) {
+      const chamberName = getSlotChamberName(slot);
+      const address = getSlotChamberAddress(slot);
+      const notes = slot.schedule?.notes || null;
+
+      const startTimeStr = slot.schedule?.startTime || formatDhakaTime(slot.startTime);
+      const endTimeStr = slot.schedule?.endTime || formatDhakaTime(slot.endTime);
+      const timeRange = `${startTimeStr} – ${endTimeStr}`;
+
+      let shiftLabel = "Chamber Session";
+      const startH = new Date(slot.startTime).getUTCHours();
+      const dhakaHour = (startH + 6) % 24;
+      if (dhakaHour < 12) {
+        shiftLabel = "Morning Session";
+      } else if (dhakaHour < 16) {
+        shiftLabel = "Afternoon Session";
+      } else if (dhakaHour < 20) {
+        shiftLabel = "Evening Session";
+      } else {
+        shiftLabel = "Night Session";
+      }
+
+      const newGroup: ChamberSlotGroup = {
+        id: key,
+        facilityId,
+        scheduleId,
+        chamberName,
+        chamberType: slot.facility?.type,
+        address,
+        timeRange,
+        shiftLabel,
+        notes,
+        slots: [],
+      };
+      groupsMap.set(key, newGroup);
+      chamberGroups.push(newGroup);
+    }
+
+    groupsMap.get(key)!.slots.push(slot);
+  }
+
+  const visibleChamberGroups =
+    selectedChamberFilter === "all"
+      ? chamberGroups
+      : chamberGroups.filter((g) => g.id === selectedChamberFilter);
 
   return (
     <>
@@ -256,7 +333,7 @@ export default function BookingModal({
           onClick={handleClose}
         >
           <div
-            className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="relative w-full sm:max-w-xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -367,35 +444,58 @@ export default function BookingModal({
                 </div>
               )}
 
-              {/* STEP 2: Choose Time & View Chamber Address */}
+              {/* STEP 2: Choose Chamber Session & Time */}
               {step === 2 && (
                 <div className="space-y-4">
-                  <div>
-                    <button
-                      onClick={() => setStep(1)}
-                      className="text-xs font-semibold text-indigo-600 hover:underline mb-2 cursor-pointer"
-                    >
-                      ← Change date
-                    </button>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Choose Time — {selectedDate && formatDhakaDate(new Date(`${selectedDate}T00:00:00.000Z`), { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Select an available serial for consultation
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <button
+                        onClick={() => setStep(1)}
+                        className="text-xs font-semibold text-indigo-600 hover:underline mb-1 cursor-pointer block"
+                      >
+                        ← Change date
+                      </button>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        Choose Serial — {selectedDate && formatDhakaDate(new Date(`${selectedDate}T00:00:00.000Z`), { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {chamberGroups.length > 1
+                          ? `${chamberGroups.length} chambers/shifts available on this date`
+                          : "Select an available serial for consultation"}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Chamber Address Box */}
-                  <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-blue-50/50 p-4 space-y-1.5">
-                    <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs">
-                      <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
-                      <span>{currentChamberName}</span>
+                  {/* Multi-Chamber Tabs when more than 1 chamber exists */}
+                  {chamberGroups.length > 1 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                      <button
+                        onClick={() => setSelectedChamberFilter("all")}
+                        className={`rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                          selectedChamberFilter === "all"
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        All Chambers ({availableSlots.length})
+                      </button>
+                      {chamberGroups.map((group) => (
+                        <button
+                          key={group.id}
+                          onClick={() => setSelectedChamberFilter(group.id)}
+                          className={`rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+                            selectedChamberFilter === group.id
+                              ? "bg-indigo-600 text-white shadow-xs"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          <Building2 className="h-3.5 w-3.5 shrink-0" />
+                          <span>{group.chamberName.split(",")[0]}</span>
+                          <span className="opacity-80">({group.slots.length})</span>
+                        </button>
+                      ))}
                     </div>
-                    <div className="flex items-start gap-2 text-slate-600 text-xs pl-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">{currentChamberAddress}</span>
-                    </div>
-                  </div>
+                  )}
 
                   {loadingSlots ? (
                     <div className="flex items-center justify-center py-8">
@@ -408,32 +508,78 @@ export default function BookingModal({
                       <p className="text-xs text-slate-500 mt-1">Please select another date from the calendar.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {availableSlots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          onClick={() => {
-                            setSelectedSlotId(slot.id);
-                            setStep(3);
-                          }}
-                          className={`rounded-2xl border p-3 text-center transition cursor-pointer ${
-                            selectedSlotId === slot.id
-                              ? "border-indigo-600 bg-indigo-50 text-indigo-900"
-                              : "border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50"
-                          }`}
+                    <div className="space-y-4">
+                      {visibleChamberGroups.map((group) => (
+                        <div
+                          key={group.id}
+                          className="rounded-2xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 to-white p-4 space-y-3 shadow-xs"
                         >
-                          <p className="text-xs font-bold text-slate-900">
-                            {formatDhakaTime(slot.startTime)}
-                          </p>
-                          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                            Serial #{slot.serialNumber}
-                          </p>
-                          {slot.facility?.name && slot.facility.name !== currentChamberName && (
-                            <p className="text-[9px] text-indigo-600 truncate mt-1">
-                              {slot.facility.name}
+                          {/* Chamber Header */}
+                          <div className="border-b border-indigo-100 pb-2.5 space-y-1">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5">
+                                <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                                  {group.chamberName}
+                                </h4>
+                              </div>
+                              <span className="inline-flex items-center gap-1 rounded-md bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-800">
+                                <Clock className="h-3 w-3" />
+                                {group.timeRange}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-slate-600 flex items-start gap-1 pl-0.5">
+                              <MapPin className="h-3 w-3 text-slate-400 shrink-0 mt-0.5" />
+                              <span className="leading-snug">{group.address}</span>
                             </p>
-                          )}
-                        </button>
+
+                            {group.notes && (
+                              <p className="text-[10px] text-amber-800 bg-amber-50 rounded px-1.5 py-0.5 inline-block font-medium">
+                                Note: {group.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Serial Slots for THIS Chamber */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                Available Serials
+                              </span>
+                              <span className="text-[11px] font-semibold text-emerald-700">
+                                {group.slots.length} slots open
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                              {group.slots.map((slot) => {
+                                const isSelected = selectedSlotId === slot.id;
+                                return (
+                                  <button
+                                    key={slot.id}
+                                    onClick={() => {
+                                      setSelectedSlotId(slot.id);
+                                      setStep(3);
+                                    }}
+                                    className={`rounded-xl border p-2.5 text-center transition cursor-pointer ${
+                                      isSelected
+                                        ? "border-indigo-600 bg-indigo-600 text-white shadow-xs"
+                                        : "border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/70"
+                                    }`}
+                                  >
+                                    <p className={`text-xs font-bold ${isSelected ? "text-white" : "text-slate-900"}`}>
+                                      {formatDhakaTime(slot.startTime)}
+                                    </p>
+                                    <p className={`text-[11px] font-bold mt-0.5 ${isSelected ? "text-indigo-100" : "text-indigo-600"}`}>
+                                      Serial #{slot.serialNumber}
+                                    </p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

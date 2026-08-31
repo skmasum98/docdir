@@ -439,13 +439,21 @@ export async function getQueueForDateAction(date: string) {
           },
         },
       },
+      schedule: {
+        select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+          notes: true,
+        },
+      },
       appointment: {
         include: {
           patient: { select: { id: true, name: true, phone: true, image: true } },
         },
       },
     },
-    orderBy: { serialNumber: "asc" },
+    orderBy: [{ startTime: "asc" }, { serialNumber: "asc" }],
   });
 
   return { date: targetDate, slots };

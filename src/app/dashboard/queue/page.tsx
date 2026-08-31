@@ -60,13 +60,30 @@ export default async function QueuePage() {
   const todaySlots = await prisma.scheduleSlot.findMany({
     where: { doctorId, slotDate: todayDate },
     include: {
+      facility: {
+        include: {
+          upazila: {
+            include: {
+              district: true,
+            },
+          },
+        },
+      },
+      schedule: {
+        select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+          notes: true,
+        },
+      },
       appointment: {
         include: {
           patient: { select: { id: true, name: true, phone: true, image: true } },
         },
       },
     },
-    orderBy: { serialNumber: "asc" },
+    orderBy: [{ startTime: "asc" }, { serialNumber: "asc" }],
   });
 
   const doctor = await prisma.doctor.findUnique({
@@ -98,6 +115,31 @@ export default async function QueuePage() {
           startTime: s.startTime.toISOString(),
           endTime: s.endTime.toISOString(),
           status: s.status,
+          facility: s.facility
+            ? {
+                id: s.facility.id,
+                name: s.facility.name,
+                type: s.facility.type,
+                address: s.facility.address,
+                phone: s.facility.phone,
+                upazila: s.facility.upazila
+                  ? {
+                      name: s.facility.upazila.name,
+                      district: s.facility.upazila.district
+                        ? { name: s.facility.upazila.district.name }
+                        : null,
+                    }
+                  : null,
+              }
+            : null,
+          schedule: s.schedule
+            ? {
+                id: s.schedule.id,
+                startTime: s.schedule.startTime,
+                endTime: s.schedule.endTime,
+                notes: s.schedule.notes,
+              }
+            : null,
           appointment: s.appointment
             ? {
                 id: s.appointment.id,

@@ -338,12 +338,16 @@ export async function getAvailableSlots(doctorId: number, date: string) {
       },
       schedule: {
         select: {
+          id: true,
+          startTime: true,
+          endTime: true,
+          slotDuration: true,
           notes: true,
           isActive: true,
         },
       },
     },
-    orderBy: { startTime: "asc" },
+    orderBy: [{ startTime: "asc" }, { serialNumber: "asc" }],
   });
 }
 

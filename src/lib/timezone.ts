@@ -12,11 +12,7 @@ const DHAKA_TZ = "Asia/Dhaka";
  * For example, "2026-09-05" in Dhaka = "2026-09-04T18:00:00.000Z" in UTC
  */
 export function dhakaDateToUTC(dhakaDateString: string): Date {
-  // Parse YYYY-MM-DD as midnight in Dhaka, then convert to UTC
-  const [year, month, day] = dhakaDateString.split("-").map(Number);
-  // Create a date string in ISO format with +06:00 offset (Dhaka)
-  const dhakaISOString = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00+06:00`;
-  return new Date(dhakaISOString);
+  return new Date(`${dhakaDateString}T00:00:00.000Z`);
 }
 
 /**
