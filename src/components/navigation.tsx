@@ -39,17 +39,21 @@ export function Navigation({ session, role, dbUserImage }: NavigationProps) {
           {role === "ADMIN" && (
             <Link
               href="/admin"
-              className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2 font-medium text-emerald-900 hover:bg-emerald-100 transition"
+              className="rounded-2xl border border-emerald-300 bg-emerald-50 px-3.5 py-1.5 font-semibold text-emerald-900 hover:bg-emerald-100 transition shadow-2xs"
             >
               Admin
             </Link>
           )}
-          {(role === "ADMIN" || role === "DOCTOR" || role === "FACILITY_ADMIN") && (
+          {session?.user && (
             <Link
               href="/dashboard"
-              className="rounded-2xl border border-indigo-300 bg-indigo-50 px-3.5 py-1.5 font-medium text-indigo-900 hover:bg-indigo-100 transition"
+              className="rounded-2xl border border-indigo-300 bg-indigo-50 px-3.5 py-1.5 font-semibold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
             >
-              Dashboard
+              {role === "DOCTOR"
+                ? "Doctor Portal"
+                : role === "FACILITY_ADMIN"
+                ? "Hospital Portal"
+                : "Dashboard"}
             </Link>
           )}
           {session?.user ? (
@@ -122,19 +126,23 @@ export function Navigation({ session, role, dbUserImage }: NavigationProps) {
             {role === "ADMIN" && (
               <Link
                 href="/admin"
-                className="block rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-medium text-emerald-900 hover:bg-emerald-100 transition"
+                className="block rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 font-semibold text-emerald-900 hover:bg-emerald-100 transition shadow-2xs"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Admin
+                Admin Panel
               </Link>
             )}
-            {(role === "ADMIN" || role === "DOCTOR" || role === "FACILITY_ADMIN") && (
+            {session?.user && (
               <Link
                 href="/dashboard"
-                className="block rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 font-medium text-indigo-900 hover:bg-indigo-100 transition"
+                className="block rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 font-semibold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Dashboard
+                {role === "DOCTOR"
+                  ? "Doctor Portal"
+                  : role === "FACILITY_ADMIN"
+                  ? "Hospital Portal"
+                  : "My Dashboard"}
               </Link>
             )}
             {session?.user ? (
