@@ -809,30 +809,30 @@ export async function seedFacilityTestsAction(formData: FormData): Promise<void>
     await prisma.facilityTest.deleteMany({ where: { facilityId } });
   }
 
-  // Insert standard diagnostic test catalog
+  // Insert standard diagnostic test catalog (batch)
   const currentCodes = new Set(
     (await prisma.facilityTest.findMany({ where: { facilityId }, select: { code: true } })).map((t) => t.code)
   );
 
-  for (const t of DEFAULT_DIAGNOSTIC_TESTS) {
-    if (!currentCodes.has(t.code)) {
-      await prisma.facilityTest.create({
-        data: {
-          facilityId,
-          code: t.code,
-          name: t.name,
-          category: t.category,
-          price: t.defaultPrice,
-          discountPrice: t.defaultDiscountPrice || null,
-          sampleType: t.sampleType || null,
-          deliveryTime: t.deliveryTime || null,
-          preparation: t.preparation || null,
-          homeSampleAvailable: t.homeSampleAvailable ?? false,
-          description: t.description || null,
-          isActive: true,
-        },
-      });
-    }
+  const newTests = DEFAULT_DIAGNOSTIC_TESTS
+    .filter((t) => !currentCodes.has(t.code))
+    .map((t) => ({
+      facilityId,
+      code: t.code,
+      name: t.name,
+      category: t.category,
+      price: t.defaultPrice,
+      discountPrice: t.defaultDiscountPrice || null,
+      sampleType: t.sampleType || null,
+      deliveryTime: t.deliveryTime || null,
+      preparation: t.preparation || null,
+      homeSampleAvailable: t.homeSampleAvailable ?? false,
+      description: t.description || null,
+      isActive: true,
+    }));
+
+  if (newTests.length > 0) {
+    await prisma.facilityTest.createMany({ data: newTests });
   }
 
   revalidatePath(`/admin/facilities/${facilityId}/tests`);
@@ -850,22 +850,20 @@ export async function bulkDiscountFacilityTestsAction(formData: FormData): Promi
   const facility = await prisma.facility.findUnique({ where: { id: facilityId } });
   if (!facility) return;
 
-  const tests = await prisma.facilityTest.findMany({ where: { facilityId } });
-
-  for (const t of tests) {
-    if (percentage === 0) {
-      // Remove discounts
-      await prisma.facilityTest.update({
-        where: { id: t.id },
-        data: { discountPrice: null },
-      });
-    } else {
-      const discount = Math.round(t.price * (1 - percentage / 100));
-      await prisma.facilityTest.update({
-        where: { id: t.id },
-        data: { discountPrice: discount },
-      });
-    }
+  // Batch update with computed discount per row using a single SQL statement.
+  // Much faster than looping with N individual update calls.
+  if (percentage === 0) {
+    await prisma.facilityTest.updateMany({
+      where: { facilityId },
+      data: { discountPrice: null },
+    });
+  } else {
+    // ROUND(price * (1 - percentage/100)) - same formula as the old loop
+    await prisma.$executeRaw`
+      UPDATE FacilityTest
+      SET discountPrice = ROUND(price * (1 - ${percentage} / 100))
+      WHERE facilityId = ${facilityId}
+    `;
   }
 
   revalidatePath(`/admin/facilities/${facilityId}/tests`);

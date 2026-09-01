@@ -31,28 +31,36 @@ export async function calculateQueueEstimates(doctorId: number, date: Date): Pro
     include: { appointment: true },
   });
 
-  // Calculate estimated time for each booked slot
-  let currentEstimate = null;
-  for (let i = 0; i < slots.length; i++) {
-    const slot = slots[i];
+  // Calculate estimated times in memory
+  const updates: { id: number; estimatedTime: Date }[] = [];
+  let currentEstimate: Date | null = null;
+
+  for (const slot of slots) {
     if (!slot.appointment) continue;
 
-    // For the first slot, start at the slot's start time
-    // For subsequent slots, start after the previous appointment
-    if (i === 0) {
+    if (!currentEstimate) {
       currentEstimate = slot.startTime;
-    } else if (currentEstimate) {
+    } else {
       currentEstimate = new Date(currentEstimate.getTime() + avgMin * 60 * 1000);
     }
 
-    // Update the appointment's estimated time
-    if (currentEstimate) {
-      await prisma.appointment.update({
-        where: { id: slot.appointment.id },
-        data: { estimatedTime: currentEstimate },
-      });
-    }
+    updates.push({ id: slot.appointment.id, estimatedTime: currentEstimate });
   }
+
+  if (updates.length === 0) return;
+
+  // Batch update using interactive transaction (one round-trip vs N)
+  // Prisma's updateMany can't do per-row different values, so we use
+  // $transaction with a sequence of updates in a single DB transaction.
+  await prisma.$transaction(
+    updates.map((u) =>
+      prisma.appointment.update({
+        where: { id: u.id },
+        data: { estimatedTime: u.estimatedTime },
+        select: { id: true },
+      })
+    )
+  );
 }
 
 /**

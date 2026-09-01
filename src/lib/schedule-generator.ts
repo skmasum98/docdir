@@ -165,21 +165,20 @@ export async function deleteScheduleBlock(scheduleId: number): Promise<{
     include: { appointment: true },
   });
 
-  let cancelledAppointments = 0;
+  // Batch cancel all appointments in a single transaction
+  const appointmentIds = slots
+    .filter((s) => s.appointment)
+    .map((s) => s.appointment!.id);
 
-  // Cancel all appointments and notify patients
-  for (const slot of slots) {
-    if (slot.appointment) {
-      await prisma.appointment.update({
-        where: { id: slot.appointment.id },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancellationReason: "Doctor deleted this schedule block",
-        },
-      });
-      cancelledAppointments++;
-    }
+  if (appointmentIds.length > 0) {
+    await prisma.appointment.updateMany({
+      where: { id: { in: appointmentIds } },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancellationReason: "Doctor deleted this schedule block",
+      },
+    });
   }
 
   // Delete all slots
@@ -187,7 +186,7 @@ export async function deleteScheduleBlock(scheduleId: number): Promise<{
   // Delete the schedule block
   await prisma.schedule.delete({ where: { id: scheduleId } });
 
-  return { success: true, cancelledAppointments };
+  return { success: true, cancelledAppointments: appointmentIds.length };
 }
 
 /**
@@ -205,23 +204,26 @@ export async function cancelScheduleBlock(
     include: { appointment: true },
   });
 
-  let cancelledAppointments = 0;
+  // Batch cancel all appointments and block all slots in transactions
+  const appointmentIds = slots
+    .filter((s) => s.appointment)
+    .map((s) => s.appointment!.id);
+  const slotIds = slots.map((s) => s.id);
 
-  for (const slot of slots) {
-    if (slot.appointment) {
-      await prisma.appointment.update({
-        where: { id: slot.appointment.id },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancellationReason: reason || "Chamber off",
-        },
-      });
-      cancelledAppointments++;
-    }
-    // Block the slot
-    await prisma.scheduleSlot.update({
-      where: { id: slot.id },
+  if (appointmentIds.length > 0) {
+    await prisma.appointment.updateMany({
+      where: { id: { in: appointmentIds } },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancellationReason: reason || "Chamber off",
+      },
+    });
+  }
+
+  if (slotIds.length > 0) {
+    await prisma.scheduleSlot.updateMany({
+      where: { id: { in: slotIds } },
       data: { status: "BLOCKED", blockedReason: reason || "Chamber off" },
     });
   }
@@ -232,7 +234,7 @@ export async function cancelScheduleBlock(
     data: { isActive: false, notes: reason || schedule.notes },
   });
 
-  return { success: true, cancelledAppointments };
+  return { success: true, cancelledAppointments: appointmentIds.length };
 }
 
 /**

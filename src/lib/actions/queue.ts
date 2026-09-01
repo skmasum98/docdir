@@ -295,9 +295,34 @@ export async function bookAppointmentAction(input: BookAppointmentInput) {
     return { ok: false, message: "Please log in to book an appointment" };
   }
 
+  // Validate input with Zod
+  const { bookAppointmentSchema } = await import("../validation");
+  const parsed = bookAppointmentSchema.safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const k = issue.path[0];
+      if (typeof k === "string") fieldErrors[k] = issue.message;
+    }
+    return {
+      ok: false,
+      message: "Please fix the errors below.",
+      fieldErrors,
+    };
+  }
+
+  // Sanitize inputs before use
+  const data = {
+    slotId: parsed.data.slotId,
+    patientName: parsed.data.patientName.trim(),
+    patientPhone: parsed.data.patientPhone.replace(/[\s()-]/g, ""),
+    patientEmail: parsed.data.patientEmail?.trim() || null,
+    chiefComplaint: parsed.data.chiefComplaint?.trim() || null,
+  };
+
   try {
     const slot = await prisma.scheduleSlot.findUnique({
-      where: { id: input.slotId },
+      where: { id: data.slotId },
       include: {
         doctor: { include: { specialty: true, user: true } },
       },
@@ -313,7 +338,7 @@ export async function bookAppointmentAction(input: BookAppointmentInput) {
 
     const result = await prisma.$transaction(async (tx) => {
       const updatedSlot = await tx.scheduleSlot.update({
-        where: { id: input.slotId, status: "AVAILABLE" },
+        where: { id: data.slotId, status: "AVAILABLE" },
         data: { status: "BOOKED" },
       });
 
@@ -323,17 +348,17 @@ export async function bookAppointmentAction(input: BookAppointmentInput) {
 
       const appt = await tx.appointment.create({
         data: {
-          slotId: input.slotId,
+          slotId: data.slotId,
           doctorId: slot.doctorId,
           patientId: Number(session.user.id),
-          patientName: input.patientName,
-          patientPhone: input.patientPhone,
-          patientEmail: input.patientEmail || null,
+          patientName: data.patientName,
+          patientPhone: data.patientPhone,
+          patientEmail: data.patientEmail,
           serialNumber: slot.serialNumber,
           bookingSource: "ONLINE",
           bookedByUserId: Number(session.user.id),
           status: "SCHEDULED",
-          chiefComplaint: input.chiefComplaint || null,
+          chiefComplaint: data.chiefComplaint,
         },
       });
 

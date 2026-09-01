@@ -464,40 +464,69 @@ export async function facilityAddFromCatalogAction(
     ).map((t) => t.code)
   );
 
-  let addedCount = 0;
+  // Split into updates vs creates for batch operations
+  const toUpdate: { code: string; price: number; discountPrice: number | null; isActive: boolean }[] = [];
+  const toCreate: {
+    facilityId: number;
+    code: string;
+    name: string;
+    category: string;
+    price: number;
+    discountPrice: number | null;
+    sampleType: string | null;
+    deliveryTime: string | null;
+    preparation: string | null;
+    homeSampleAvailable: boolean;
+    description: string | null;
+    isActive: boolean;
+  }[] = [];
+
   for (const item of items) {
+    const price = Math.max(0, Number(item.price) || 0);
+    const discountPrice =
+      item.discountPrice !== undefined && item.discountPrice !== null
+        ? Number(item.discountPrice)
+        : null;
+    const isActive = item.isActive ?? true;
+
     if (existingCodes.has(item.code)) {
-      // Update existing item's price and active status
-      await prisma.facilityTest.updateMany({
-        where: { facilityId, code: item.code },
-        data: {
-          price: Math.max(0, Number(item.price) || 0),
-          discountPrice: item.discountPrice !== undefined && item.discountPrice !== null ? Number(item.discountPrice) : null,
-          isActive: item.isActive ?? true,
-        },
-      });
-      addedCount++;
+      toUpdate.push({ code: item.code, price, discountPrice, isActive });
     } else {
-      // Create new
-      await prisma.facilityTest.create({
-        data: {
-          facilityId,
-          code: item.code,
-          name: item.name,
-          category: item.category,
-          price: Math.max(0, Number(item.price) || 0),
-          discountPrice: item.discountPrice !== undefined && item.discountPrice !== null ? Number(item.discountPrice) : null,
-          sampleType: item.sampleType || null,
-          deliveryTime: item.deliveryTime || null,
-          preparation: item.preparation || null,
-          homeSampleAvailable: item.homeSampleAvailable ?? false,
-          description: item.description || null,
-          isActive: item.isActive ?? true,
-        },
+      toCreate.push({
+        facilityId,
+        code: item.code,
+        name: item.name,
+        category: item.category,
+        price,
+        discountPrice,
+        sampleType: item.sampleType || null,
+        deliveryTime: item.deliveryTime || null,
+        preparation: item.preparation || null,
+        homeSampleAvailable: item.homeSampleAvailable ?? false,
+        description: item.description || null,
+        isActive,
       });
-      addedCount++;
     }
   }
+
+  // Batch insert new items
+  if (toCreate.length > 0) {
+    await prisma.facilityTest.createMany({ data: toCreate });
+  }
+
+  // Batch update existing items in a transaction (each code has different values)
+  if (toUpdate.length > 0) {
+    await prisma.$transaction(
+      toUpdate.map((u) =>
+        prisma.facilityTest.updateMany({
+          where: { facilityId, code: u.code },
+          data: { price: u.price, discountPrice: u.discountPrice, isActive: u.isActive },
+        })
+      )
+    );
+  }
+
+  const addedCount = toCreate.length + toUpdate.length;
 
   revalidatePath(`/facility/${facility.slug}`);
   revalidatePath("/dashboard/facility");

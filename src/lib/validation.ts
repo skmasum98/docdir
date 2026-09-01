@@ -70,6 +70,36 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+// Booking input validation
+export const bookAppointmentSchema = z.object({
+  slotId: z.coerce.number().int().positive("Invalid slot"),
+  patientName: z
+    .string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be less than 100 characters")
+    .regex(/^[\p{L}\s'.-]+$/u, "Name contains invalid characters"),
+  patientPhone: z
+    .string()
+    .trim()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(20, "Phone number is too long")
+    .regex(/^[+\d\s()-]+$/, "Phone number contains invalid characters"),
+  patientEmail: z
+    .string()
+    .trim()
+    .email("Invalid email")
+    .max(160, "Email is too long")
+    .optional()
+    .or(z.literal("")),
+  chiefComplaint: z
+    .string()
+    .trim()
+    .max(500, "Description is too long (max 500 characters)")
+    .optional()
+    .or(z.literal("")),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),
