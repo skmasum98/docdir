@@ -76,7 +76,7 @@ export default async function HomePage() {
             <div className="inline-flex max-w-full items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-2.5 py-1 text-[10px] font-bold text-teal-900 sm:px-3 sm:text-xs">
               <Sparkles className="h-3.5 w-3.5 shrink-0 text-teal-700" />
               <span className="truncate">
-                Complete Healthcare & Diagnostic Directory
+                Complete Healthcare & Diagnostic Directory in Bangladesh
               </span>
             </div>
 
