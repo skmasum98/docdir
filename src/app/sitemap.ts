@@ -1,124 +1,157 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
-const siteUrl = (
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://drchamber.info"
-).replace(/\/$/, "");
+const siteUrl = "https://drchamber.info";
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticPages = [
+  const now = new Date();
+
+  // Public static pages only
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: siteUrl,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      lastModified: now,
+      changeFrequency: "daily",
       priority: 1,
     },
     {
       url: `${siteUrl}/search`,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      lastModified: now,
+      changeFrequency: "daily",
       priority: 0.9,
     },
     {
       url: `${siteUrl}/facilities`,
-      lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      lastModified: now,
+      changeFrequency: "daily",
       priority: 0.9,
-    },
-    {
-      url: `${siteUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
-    },
-    {
-      url: `${siteUrl}/register`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
-    },
-    {
-      url: `${siteUrl}/forgot-password`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.3,
     },
   ];
 
   try {
-    const [doctors, facilities, divisions, specialties] = await Promise.all([
+    const [
+      doctors,
+      facilities,
+      divisions,
+      specialties,
+    ] = await Promise.all([
       prisma.doctor.findMany({
-        where: { status: "PUBLISHED" },
-        select: { slug: true, updatedAt: true },
+        where: {
+          status: "PUBLISHED",
+        },
+        select: {
+          slug: true,
+          updatedAt: true,
+        },
       }),
+
       prisma.facility.findMany({
-        select: { slug: true, updatedAt: true },
+        select: {
+          slug: true,
+          updatedAt: true,
+        },
       }),
+
       prisma.division.findMany({
-        include: {
+        select: {
+          slug: true,
           districts: {
-            include: {
-              upazilas: true,
+            select: {
+              slug: true,
+              upazilas: {
+                select: {
+                  slug: true,
+                },
+              },
             },
           },
         },
       }),
+
       prisma.specialty.findMany({
-        select: { slug: true },
+        select: {
+          slug: true,
+        },
       }),
     ]);
 
-    const doctorPages = doctors.map((doctor) => ({
-      url: `${siteUrl}/doctor/${doctor.slug}`,
-      lastModified: doctor.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    }));
+    const doctorPages: MetadataRoute.Sitemap = doctors.map(
+      (doctor) => ({
+        url: `${siteUrl}/doctor/${doctor.slug}`,
+        lastModified: doctor.updatedAt,
+        changeFrequency: "weekly",
+        priority: 0.8,
+      })
+    );
 
-    const facilityPages = facilities.map((facility) => ({
-      url: `${siteUrl}/facility/${facility.slug}`,
-      lastModified: facility.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    }));
+    const facilityPages: MetadataRoute.Sitemap = facilities.map(
+      (facility) => ({
+        url: `${siteUrl}/facility/${facility.slug}`,
+        lastModified: facility.updatedAt,
+        changeFrequency: "weekly",
+        priority: 0.8,
+      })
+    );
 
-    const locationPages = divisions.flatMap((division) => [
-      {
-        url: `${siteUrl}/division/${division.slug}`,
-        lastModified: new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      },
-      ...division.districts.flatMap((district) => [
-        {
-          url: `${siteUrl}/division/${division.slug}/district/${district.slug}`,
-          lastModified: new Date(),
-          changeFrequency: "weekly" as const,
-          priority: 0.5,
-        },
-        ...district.upazilas.map((upazila) => ({
-          url: `${siteUrl}/division/${division.slug}/district/${district.slug}/upazila/${upazila.slug}`,
-          lastModified: new Date(),
-          changeFrequency: "weekly" as const,
-          priority: 0.4,
-        })),
-      ]),
-    ]);
+    const locationPages: MetadataRoute.Sitemap =
+      divisions.flatMap((division) => {
+        const divisionPage: MetadataRoute.Sitemap[number] = {
+          url: `${siteUrl}/division/${division.slug}`,
+          lastModified: now,
+          changeFrequency: "weekly",
+          priority: 0.6,
+        };
 
-    const specialtyPages = specialties.map((specialty) => ({
-      url: `${siteUrl}/search?specialty=${specialty.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    }));
+        const districtPages = division.districts.flatMap(
+          (district) => {
+            const districtPage: MetadataRoute.Sitemap[number] = {
+              url: `${siteUrl}/division/${division.slug}/district/${district.slug}`,
+              lastModified: now,
+              changeFrequency: "weekly",
+              priority: 0.5,
+            };
 
-    return [...staticPages, ...doctorPages, ...facilityPages, ...locationPages, ...specialtyPages];
+            const upazilaPages =
+              district.upazilas.map((upazila) => ({
+                url: `${siteUrl}/division/${division.slug}/district/${district.slug}/upazila/${upazila.slug}`,
+                lastModified: now,
+                changeFrequency: "weekly" as const,
+                priority: 0.4,
+              }));
+
+            return [districtPage, ...upazilaPages];
+          }
+        );
+
+        return [divisionPage, ...districtPages];
+      });
+
+    const specialtyPages: MetadataRoute.Sitemap =
+      specialties.map((specialty) => ({
+        url: `${siteUrl}/search?specialty=${encodeURIComponent(
+          specialty.slug
+        )}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.7,
+      }));
+
+    return [
+      ...staticPages,
+      ...doctorPages,
+      ...facilityPages,
+      ...locationPages,
+      ...specialtyPages,
+    ];
   } catch (error) {
-    console.error("Failed to generate sitemap.xml", error);
+    console.error(
+      "Sitemap generation failed:",
+      error
+    );
+
+    // Always return valid sitemap XML even if database fails.
     return staticPages;
   }
 }

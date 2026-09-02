@@ -1,10 +1,6 @@
-import { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
-const siteUrl = (
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://drchamber.info"
-).replace(/\/$/, "");
+const siteUrl = "https://drchamber.info";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -20,8 +16,6 @@ export default function robots(): MetadataRoute.Robots {
           "/forgot-password",
           "/reset-password",
           "/api/",
-          "/_next/",
-          "/static/",
           "/*?*utm_*",
           "/*?*fbclid*",
           "/*?*gclid*",
@@ -40,7 +34,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: "/",
       },
     ],
+
     sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
   };
 }
