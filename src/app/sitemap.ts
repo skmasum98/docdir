@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
-const siteUrl = process.env.NEXTAUTH_URL || "https://doctordirectory.com";
+const siteUrl = process.env.NEXTAUTH_URL || "https://drchamber.info";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
@@ -82,20 +82,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const locationPages = divisions.flatMap((division) => [
     {
-      url: `${siteUrl}/search?division=${division.slug}`,
+      url: `${siteUrl}/division/${division.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.6,
     },
     ...division.districts.flatMap((district) => [
       {
-        url: `${siteUrl}/search?division=${division.slug}&district=${district.slug}`,
+        url: `${siteUrl}/division/${division.slug}/district/${district.slug}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.5,
       },
       ...district.upazilas.map((upazila) => ({
-        url: `${siteUrl}/search?division=${division.slug}&district=${district.slug}&upazila=${upazila.slug}`,
+        url: `${siteUrl}/division/${division.slug}/district/${district.slug}/upazila/${upazila.slug}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority: 0.4,
