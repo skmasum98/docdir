@@ -146,12 +146,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...specialtyPages,
     ];
   } catch (error) {
-    console.error(
-      "Sitemap generation failed:",
-      error
-    );
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const stack =
+      error instanceof Error ? error.stack : undefined;
 
-    // Always return valid sitemap XML even if database fails.
+    console.error("[sitemap] generation failed", {
+      message,
+      stack,
+      url: siteUrl,
+      fallback: "staticPages",
+    });
+
+    if (stack) {
+      console.error(stack);
+    }
+
+    // Always return valid sitemap XML even if database fails,
+    // so Google does not record a "Couldn't fetch" error.
     return staticPages;
   }
 }
