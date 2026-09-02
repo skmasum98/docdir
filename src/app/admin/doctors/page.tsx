@@ -5,22 +5,55 @@ import { UserAvatar } from "@/components/user-avatar";
 
 export const metadata = { title: "Doctors | Admin" };
 
-type Props = { searchParams: Promise<{ saved?: string; q?: string }> };
+const PAGE_SIZE = 20;
+
+type Props = {
+  searchParams: Promise<{ saved?: string; q?: string; page?: string | string[] }>;
+};
+
+function toSingleParam(value: string | string[] | undefined): string | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    const last = value[value.length - 1];
+    return last ? last.trim() || undefined : undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
 
 export default async function AdminDoctorsPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const q = sp.q?.trim() ?? "";
+  const q = toSingleParam(sp.q)?.trim() ?? "";
+  const requestedPage = Math.max(1, Number(toSingleParam(sp.page) ?? "1") || 1);
 
-  const doctors = await prisma.doctor.findMany({
-    where: q
-      ? { fullName: { contains: q } }
-      : undefined,
-    orderBy: { createdAt: "desc" },
-    include: {
-      specialty: { select: { name: true } },
-      doctorFacilities: { select: { id: true } },
-    },
-  });
+  const [doctors, totalCount] = await Promise.all([
+    prisma.doctor.findMany({
+      where: q ? { fullName: { contains: q } } : undefined,
+      orderBy: { createdAt: "desc" },
+      skip: (requestedPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: {
+        specialty: { select: { name: true } },
+        doctorFacilities: { select: { id: true } },
+      },
+    }),
+    prisma.doctor.count({
+      where: q ? { fullName: { contains: q } } : undefined,
+    }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const hasPrevPage = page > 1;
+  const hasNextPage = page < totalPages;
+
+  const buildPageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sp.saved === "1") params.set("saved", "1");
+    params.set("page", String(nextPage));
+    return `/admin/doctors?${params.toString()}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -51,7 +84,8 @@ export default async function AdminDoctorsPage({ searchParams }: Props) {
         </div>
       )}
 
-      <form className="flex gap-2">
+      <form method="get" action="/admin/doctors" className="flex gap-2">
+        <input type="hidden" name="page" value="1" />
         <input
           name="q"
           defaultValue={q}
@@ -128,6 +162,41 @@ export default async function AdminDoctorsPage({ searchParams }: Props) {
           </tbody>
         </table>
       </div>
+
+      {totalCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+          <div>
+            Showing {Math.min((page - 1) * PAGE_SIZE + 1, totalCount)}-{Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href={buildPageHref(page - 1)}
+              aria-disabled={!hasPrevPage}
+              className={`rounded-xl border px-3 py-1.5 text-sm font-medium ${
+                hasPrevPage
+                  ? "border-slate-300 text-slate-700 hover:bg-slate-50"
+                  : "pointer-events-none cursor-not-allowed border-slate-200 text-slate-400"
+              }`}
+            >
+              Previous
+            </Link>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Page {page} / {totalPages}
+            </span>
+            <Link
+              href={buildPageHref(page + 1)}
+              aria-disabled={!hasNextPage}
+              className={`rounded-xl border px-3 py-1.5 text-sm font-medium ${
+                hasNextPage
+                  ? "border-slate-300 text-slate-700 hover:bg-slate-50"
+                  : "pointer-events-none cursor-not-allowed border-slate-200 text-slate-400"
+              }`}
+            >
+              Next
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
