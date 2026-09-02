@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 
-const siteUrl = process.env.NEXTAUTH_URL || "https://doctordirectory.com";
+const siteUrl = process.env.NEXTAUTH_URL || "https://drchamber.info";
 
 export default function robots(): MetadataRoute.Robots {
   return {
