@@ -1,10 +1,15 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 
-const siteUrl = "https://drchamber.info";
+const siteUrl = (
+  process.env.NEXTAUTH_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://drchamber.info"
+).replace(/\/$/, "");
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Static pages
   const staticPages = [
     {
       url: siteUrl,
@@ -44,82 +49,76 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic pages - Doctors
-  const doctors = await prisma.doctor.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true, updatedAt: true },
-  });
-
-  const doctorPages = doctors.map((doctor) => ({
-    url: `${siteUrl}/doctor/${doctor.slug}`,
-    lastModified: doctor.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
-
-  // Dynamic pages - Facilities
-  const facilities = await prisma.facility.findMany({
-    select: { slug: true, updatedAt: true },
-  });
-
-  const facilityPages = facilities.map((facility) => ({
-    url: `${siteUrl}/facility/${facility.slug}`,
-    lastModified: facility.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
-
-  // Dynamic pages - Divisions/Districts for location-based SEO
-  const divisions = await prisma.division.findMany({
-    include: {
-      districts: {
+  try {
+    const [doctors, facilities, divisions, specialties] = await Promise.all([
+      prisma.doctor.findMany({
+        where: { status: "PUBLISHED" },
+        select: { slug: true, updatedAt: true },
+      }),
+      prisma.facility.findMany({
+        select: { slug: true, updatedAt: true },
+      }),
+      prisma.division.findMany({
         include: {
-          upazilas: true,
+          districts: {
+            include: {
+              upazilas: true,
+            },
+          },
         },
-      },
-    },
-  });
+      }),
+      prisma.specialty.findMany({
+        select: { slug: true },
+      }),
+    ]);
 
-  const locationPages = divisions.flatMap((division) => [
-    {
-      url: `${siteUrl}/division/${division.slug}`,
+    const doctorPages = doctors.map((doctor) => ({
+      url: `${siteUrl}/doctor/${doctor.slug}`,
+      lastModified: doctor.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+    const facilityPages = facilities.map((facility) => ({
+      url: `${siteUrl}/facility/${facility.slug}`,
+      lastModified: facility.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+    const locationPages = divisions.flatMap((division) => [
+      {
+        url: `${siteUrl}/division/${division.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      },
+      ...division.districts.flatMap((district) => [
+        {
+          url: `${siteUrl}/division/${division.slug}/district/${district.slug}`,
+          lastModified: new Date(),
+          changeFrequency: "weekly" as const,
+          priority: 0.5,
+        },
+        ...district.upazilas.map((upazila) => ({
+          url: `${siteUrl}/division/${division.slug}/district/${district.slug}/upazila/${upazila.slug}`,
+          lastModified: new Date(),
+          changeFrequency: "weekly" as const,
+          priority: 0.4,
+        })),
+      ]),
+    ]);
+
+    const specialtyPages = specialties.map((specialty) => ({
+      url: `${siteUrl}/search?specialty=${specialty.slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
-      priority: 0.6,
-    },
-    ...division.districts.flatMap((district) => [
-      {
-        url: `${siteUrl}/division/${division.slug}/district/${district.slug}`,
-        lastModified: new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.5,
-      },
-      ...district.upazilas.map((upazila) => ({
-        url: `${siteUrl}/division/${division.slug}/district/${district.slug}/upazila/${upazila.slug}`,
-        lastModified: new Date(),
-        changeFrequency: "weekly" as const,
-        priority: 0.4,
-      })),
-    ]),
-  ]);
+      priority: 0.7,
+    }));
 
-  // Dynamic pages - Specialties
-  const specialties = await prisma.specialty.findMany({
-    select: { slug: true },
-  });
-
-  const specialtyPages = specialties.map((specialty) => ({
-    url: `${siteUrl}/search?specialty=${specialty.slug}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.7,
-  }));
-
-  return [
-    ...staticPages,
-    ...doctorPages,
-    ...facilityPages,
-    ...locationPages,
-    ...specialtyPages,
-  ];
+    return [...staticPages, ...doctorPages, ...facilityPages, ...locationPages, ...specialtyPages];
+  } catch (error) {
+    console.error("Failed to generate sitemap.xml", error);
+    return staticPages;
+  }
 }

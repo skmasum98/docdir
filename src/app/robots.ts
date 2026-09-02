@@ -1,6 +1,10 @@
 import { MetadataRoute } from "next";
 
-const siteUrl = "https://drchamber.info";
+const siteUrl = (
+  process.env.NEXTAUTH_URL ||
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://drchamber.info"
+).replace(/\/$/, "");
 
 export default function robots(): MetadataRoute.Robots {
   return {
