@@ -125,7 +125,7 @@ export function DoctorClaimBanner({ doctorId, doctorName }: DoctorClaimBannerPro
             </span>
             <div className="flex items-center gap-3">
               <a
-                href="https://wa.me/8801700000000?text=Hello,%20I%20am%20a%20doctor%20and%20need%20assistance%20claiming%20my%20profile"
+                href="https://wa.me/8801924810590?text=Hello,%20I%20am%20a%20doctor%20and%20need%20assistance%20claiming%20my%20profile"
                 target="_blank"
                 rel="noreferrer"
                 className="font-bold underline text-amber-900 hover:text-amber-950"

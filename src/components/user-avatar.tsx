@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { User as UserIcon } from "lucide-react";
 
@@ -8,6 +9,7 @@ interface UserAvatarProps {
   name?: string | null;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  fallbackSrc?: string | null;
 }
 
 export function UserAvatar({
@@ -15,6 +17,7 @@ export function UserAvatar({
   name,
   size = "md",
   className = "",
+  fallbackSrc = "/Dotor-Avatar.webp",
 }: UserAvatarProps) {
   const sizeClasses = {
     sm: "w-8 h-8 text-xs",
@@ -40,19 +43,42 @@ export function UserAvatar({
         .toUpperCase()
     : "";
 
-  if (src) {
+  const [imgError, setImgError] = useState(false);
+  const [fallbackFailed, setFallbackFailed] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
+
+  useEffect(() => {
+    setFallbackFailed(false);
+  }, [fallbackSrc]);
+
+  const cleanSrc = src?.trim() ? src.trim() : null;
+  const cleanFallback = fallbackSrc?.trim() ? fallbackSrc.trim() : null;
+  const effectiveSrc =
+    !cleanSrc || imgError ? (fallbackFailed ? null : cleanFallback) : cleanSrc;
+
+  if (effectiveSrc) {
     return (
       <div
         className={`relative overflow-hidden rounded-full border border-slate-200 bg-slate-100 flex-shrink-0 ${sizeClasses[size]} ${className}`}
       >
         <Image
-          src={src}
+          src={effectiveSrc}
           alt={name || "User Avatar"}
           width={pixelDimensions[size]}
           height={pixelDimensions[size]}
           className="h-full w-full object-cover"
           referrerPolicy="no-referrer"
           unoptimized={false}
+          onError={() => {
+            if (effectiveSrc === cleanFallback) {
+              setFallbackFailed(true);
+            } else {
+              setImgError(true);
+            }
+          }}
         />
       </div>
     );

@@ -255,44 +255,103 @@ export default async function SearchPage({ searchParams }: Props) {
 
   /* =========================================================
      CASCADING LOCATION DATA
+     Resolve parent slugs even when a child slug is present
+     without its parent (e.g. shared/bookmarked URLs).
   ========================================================= */
 
-  const [districts, upazilas, facilities] =
-    await Promise.all([
-      divisionSlug
-        ? Promise.resolve(
-            divisions.find(
-              (d) => d.slug === divisionSlug
-            )?.districts ?? []
-          )
-        : Promise.resolve([]),
+  // If district is selected without division, find its division first
+  let effectiveDivisionSlug = divisionSlug;
+  if (!effectiveDivisionSlug && districtSlug) {
+    const parent = await prisma.district.findUnique({
+      where: { slug: districtSlug },
+      select: { division: { select: { slug: true } } },
+    });
+    effectiveDivisionSlug = parent?.division.slug;
+  }
 
-      districtSlug
-        ? prisma.upazila.findMany({
-            where: {
-              district: {
-                slug: districtSlug,
+  // If upazila is selected without district, find its district + division
+  let effectiveDistrictSlug = districtSlug;
+  if (!effectiveDistrictSlug && upazilaSlug) {
+    const parent = await prisma.upazila.findUnique({
+      where: { slug: upazilaSlug },
+      select: {
+        slug: true,
+        district: {
+          select: {
+            slug: true,
+            division: { select: { slug: true } },
+          },
+        },
+      },
+    });
+    effectiveDistrictSlug = parent?.district.slug;
+    if (!effectiveDivisionSlug) {
+      effectiveDivisionSlug = parent?.district.division.slug;
+    }
+  }
+
+  // If facility is selected without upazila, find its upazila chain
+  let effectiveUpazilaSlug = upazilaSlug;
+  if (!effectiveUpazilaSlug && facilitySlug) {
+    const parent = await prisma.facility.findUnique({
+      where: { slug: facilitySlug },
+      select: {
+        upazila: {
+          select: {
+            slug: true,
+            district: {
+              select: {
+                slug: true,
+                division: { select: { slug: true } },
               },
             },
-            orderBy: {
-              name: "asc",
-            },
-          })
-        : Promise.resolve([]),
+          },
+        },
+      },
+    });
+    effectiveUpazilaSlug = parent?.upazila?.slug;
+    if (!effectiveDistrictSlug) {
+      effectiveDistrictSlug = parent?.upazila?.district.slug;
+    }
+    if (!effectiveDivisionSlug) {
+      effectiveDivisionSlug = parent?.upazila?.district.division.slug;
+    }
+  }
 
-      upazilaSlug
-        ? prisma.facility.findMany({
-            where: {
-              upazila: {
-                slug: upazilaSlug,
-              },
+  const [districts, upazilas, facilities] = await Promise.all([
+    effectiveDivisionSlug
+      ? Promise.resolve(
+          divisions.find((d) => d.slug === effectiveDivisionSlug)
+            ?.districts ?? []
+        )
+      : Promise.resolve([]),
+
+    effectiveDistrictSlug
+      ? prisma.upazila.findMany({
+          where: {
+            district: {
+              slug: effectiveDistrictSlug,
             },
-            orderBy: {
-              name: "asc",
+          },
+          orderBy: {
+            name: "asc",
+          },
+        })
+      : Promise.resolve([]),
+
+    effectiveUpazilaSlug
+      ? prisma.facility.findMany({
+          where: {
+            upazila: {
+              slug: effectiveUpazilaSlug,
             },
-          })
-        : Promise.resolve([]),
-    ]);
+          },
+          orderBy: {
+            name: "asc",
+          },
+        })
+      : Promise.resolve([]),
+  ]);
 
   /* =========================================================
      QUERY BUILDER
@@ -388,22 +447,55 @@ export default async function SearchPage({ searchParams }: Props) {
           </h1>
 
           <p className="mt-1 text-sm text-slate-600">
-            {total} doctor{total === 1 ? "" : "s"} found.
+            {total} doctor{total === 1 ? "" : "s"} found
+            {q ? (
+              <>
+                {" "}
+                for <span className="font-semibold text-slate-900">“{q}”</span>
+              </>
+            ) : (
+              "."
+            )}
           </p>
         </header>
 
         {/* =====================================================
-            MOBILE SEARCH
+            UNIFIED SEARCH BAR (visible on all screens)
+            Preserves active filters so typing a query never
+            wipes specialty / location / fee selections.
         ===================================================== */}
 
         <form
           action="/search"
           method="get"
           role="search"
-          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:hidden"
+          className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:rounded-3xl sm:p-4"
         >
+          {/* Preserve active filters */}
+          {specialtySlug && (
+            <input type="hidden" name="specialty" value={specialtySlug} />
+          )}
+          {divisionSlug && (
+            <input type="hidden" name="division" value={divisionSlug} />
+          )}
+          {districtSlug && (
+            <input type="hidden" name="district" value={districtSlug} />
+          )}
+          {upazilaSlug && (
+            <input type="hidden" name="upazila" value={upazilaSlug} />
+          )}
+          {facilitySlug && (
+            <input type="hidden" name="facility" value={facilitySlug} />
+          )}
+          {gender && <input type="hidden" name="gender" value={gender} />}
+          {verified === "1" && (
+            <input type="hidden" name="verified" value="1" />
+          )}
+          {minFee && <input type="hidden" name="minFee" value={minFee} />}
+          {maxFee && <input type="hidden" name="maxFee" value={maxFee} />}
+
           <label
-            htmlFor="mobile-search"
+            htmlFor="doctor-search"
             className="mb-2 block text-sm font-semibold text-slate-800"
           >
             Search doctors
@@ -414,21 +506,49 @@ export default async function SearchPage({ searchParams }: Props) {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
               <input
-                id="mobile-search"
+                id="doctor-search"
                 name="q"
+                type="search"
                 defaultValue={q ?? ""}
-                placeholder="Doctor name, hospital, area..."
-                className="h-12 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                placeholder="Doctor name, specialty, hospital, area..."
+                autoComplete="off"
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-10 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
               />
+
+              {q && (
+                <Link
+                  href={buildQuery({ q: undefined, page: undefined })}
+                  aria-label="Clear search"
+                  title="Clear search"
+                  className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-4 w-4" />
+                </Link>
+              )}
             </div>
 
-            <button
-              type="submit"
-              className="h-12 rounded-xl bg-slate-950 px-6 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.99]"
-            >
-              Search
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="h-12 flex-1 rounded-xl bg-slate-950 px-6 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.99] sm:flex-none"
+              >
+                Search
+              </button>
+
+              {hasActiveFilters && (
+                <Link
+                  href="/search"
+                  className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Reset
+                </Link>
+              )}
+            </div>
           </div>
+
+          <p className="mt-2 text-xs text-slate-500">
+            Tip: select a specialty or location below to narrow results.
+          </p>
         </form>
 
         {/* =====================================================
@@ -502,7 +622,7 @@ export default async function SearchPage({ searchParams }: Props) {
                 DESKTOP FILTERS
             ================================================= */}
 
-            <div className="hidden space-y-4 md:block">
+            <div className="hidden space-y-4 md:block lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
 
               {/* Specialty */}
               <FilterGroup title="Specialty">
@@ -551,13 +671,17 @@ export default async function SearchPage({ searchParams }: Props) {
                   method="get"
                   className="space-y-4 text-sm"
                 >
-                  {q && (
+                  {/* Visible search — previously desktop had no search box */}
+                  <FilterField label="Search keyword">
                     <input
-                      type="hidden"
+                      type="search"
                       name="q"
-                      value={q}
+                      defaultValue={q ?? ""}
+                      placeholder="Name, hospital, area..."
+                      autoComplete="off"
+                      className="filter-input"
                     />
-                  )}
+                  </FilterField>
 
                   {specialtySlug && (
                     <input
@@ -568,7 +692,14 @@ export default async function SearchPage({ searchParams }: Props) {
                   )}
 
                   {/* Division */}
-                  <FilterField label="Division">
+                  <FilterField
+                    label="Division"
+                    hint={
+                      districts.length === 0
+                        ? "Select a division to unlock districts."
+                        : undefined
+                    }
+                  >
                     <select
                       name="division"
                       defaultValue={divisionSlug ?? ""}
@@ -589,77 +720,101 @@ export default async function SearchPage({ searchParams }: Props) {
                     </select>
                   </FilterField>
 
-                  {/* District */}
-                  {districts.length > 0 && (
-                    <FilterField label="District">
-                      <select
-                        name="district"
-                        defaultValue={districtSlug ?? ""}
-                        className="filter-select"
-                      >
-                        <option value="">
-                          All Districts
+                  {/* District — always visible, disabled until division chosen */}
+                  <FilterField
+                    label="District"
+                    hint={
+                      !divisionSlug
+                        ? "Select a division first."
+                        : districts.length === 0
+                          ? "No districts in this division."
+                          : undefined
+                    }
+                  >
+                    <select
+                      name="district"
+                      defaultValue={districtSlug ?? ""}
+                      disabled={!divisionSlug || districts.length === 0}
+                      className="filter-select disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      <option value="">
+                        {divisionSlug ? "All Districts" : "Select division first"}
+                      </option>
+
+                      {districts.map((d) => (
+                        <option
+                          key={d.id}
+                          value={d.slug}
+                        >
+                          {d.name}
                         </option>
+                      ))}
+                    </select>
+                  </FilterField>
 
-                        {districts.map((d) => (
-                          <option
-                            key={d.id}
-                            value={d.slug}
-                          >
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
-                    </FilterField>
-                  )}
+                  {/* Upazila — always visible */}
+                  <FilterField
+                    label="Upazila / Thana"
+                    hint={
+                      !districtSlug
+                        ? "Select a district first."
+                        : upazilas.length === 0
+                          ? "No upazilas in this district."
+                          : undefined
+                    }
+                  >
+                    <select
+                      name="upazila"
+                      defaultValue={upazilaSlug ?? ""}
+                      disabled={!districtSlug || upazilas.length === 0}
+                      className="filter-select disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      <option value="">
+                        {districtSlug ? "All Upazilas" : "Select district first"}
+                      </option>
 
-                  {/* Upazila */}
-                  {upazilas.length > 0 && (
-                    <FilterField label="Upazila / Thana">
-                      <select
-                        name="upazila"
-                        defaultValue={upazilaSlug ?? ""}
-                        className="filter-select"
-                      >
-                        <option value="">
-                          All Upazilas
+                      {upazilas.map((u) => (
+                        <option
+                          key={u.id}
+                          value={u.slug}
+                        >
+                          {u.name}
                         </option>
+                      ))}
+                    </select>
+                  </FilterField>
 
-                        {upazilas.map((u) => (
-                          <option
-                            key={u.id}
-                            value={u.slug}
-                          >
-                            {u.name}
-                          </option>
-                        ))}
-                      </select>
-                    </FilterField>
-                  )}
+                  {/* Facility — always visible */}
+                  <FilterField
+                    label="Hospital / Facility"
+                    hint={
+                      !upazilaSlug
+                        ? "Select an upazila first."
+                        : facilities.length === 0
+                          ? "No facilities in this upazila."
+                          : undefined
+                    }
+                  >
+                    <select
+                      name="facility"
+                      defaultValue={facilitySlug ?? ""}
+                      disabled={!upazilaSlug || facilities.length === 0}
+                      className="filter-select disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                    >
+                      <option value="">
+                        {upazilaSlug ? "All Facilities" : "Select upazila first"}
+                      </option>
 
-                  {/* Facility */}
-                  {facilities.length > 0 && (
-                    <FilterField label="Hospital / Facility">
-                      <select
-                        name="facility"
-                        defaultValue={facilitySlug ?? ""}
-                        className="filter-select"
-                      >
-                        <option value="">
-                          All Facilities
+                      {facilities.map((f) => (
+                        <option
+                          key={f.id}
+                          value={f.slug}
+                        >
+                          {f.name}
                         </option>
-
-                        {facilities.map((f) => (
-                          <option
-                            key={f.id}
-                            value={f.slug}
-                          >
-                            {f.name}
-                          </option>
-                        ))}
-                      </select>
-                    </FilterField>
-                  )}
+                      ))}
+                    </select>
+                  </FilterField>
 
                   {/* Gender */}
                   <FilterField label="Gender">
@@ -747,7 +902,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <section className="min-w-0">
 
             {/* Result summary */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium text-slate-500 sm:text-sm">
                 Showing{" "}
                 {doctors.length > 0
@@ -766,6 +921,128 @@ export default async function SearchPage({ searchParams }: Props) {
                 </span>
               )}
             </div>
+
+            {/* Active filter chips — one-tap remove */}
+            {hasActiveFilters && (
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {q && (
+                  <Link
+                    href={buildQuery({ q: undefined, page: undefined })}
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    <Search className="h-3 w-3 shrink-0 text-slate-400" />
+                    <span className="max-w-40 truncate">“{q}”</span>
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {specialtySlug && (
+                  <Link
+                    href={buildQuery({ specialty: undefined, page: undefined })}
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-900 transition hover:bg-indigo-100"
+                  >
+                    <span className="max-w-40 truncate">
+                      {specialties.find((s) => s.slug === specialtySlug)?.name ??
+                        specialtySlug}
+                    </span>
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {divisionSlug && (
+                  <Link
+                    href={buildQuery({
+                      division: undefined,
+                      district: undefined,
+                      upazila: undefined,
+                      facility: undefined,
+                      page: undefined,
+                    })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+                    {divisions.find((d) => d.slug === divisionSlug)?.name ??
+                      divisionSlug}
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {districtSlug && (
+                  <Link
+                    href={buildQuery({
+                      district: undefined,
+                      upazila: undefined,
+                      facility: undefined,
+                      page: undefined,
+                    })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {districts.find((d) => d.slug === districtSlug)?.name ??
+                      districtSlug}
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {upazilaSlug && (
+                  <Link
+                    href={buildQuery({
+                      upazila: undefined,
+                      facility: undefined,
+                      page: undefined,
+                    })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {upazilas.find((u) => u.slug === upazilaSlug)?.name ??
+                      upazilaSlug}
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {facilitySlug && (
+                  <Link
+                    href={buildQuery({ facility: undefined, page: undefined })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {facilities.find((f) => f.slug === facilitySlug)?.name ??
+                      facilitySlug}
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {gender && (
+                  <Link
+                    href={buildQuery({ gender: undefined, page: undefined })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    {gender.charAt(0) + gender.slice(1).toLowerCase()}
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {verified === "1" && (
+                  <Link
+                    href={buildQuery({ verified: undefined, page: undefined })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-100"
+                  >
+                    <ShieldCheck className="h-3 w-3 shrink-0" />
+                    Verified
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                {(minFee || maxFee) && (
+                  <Link
+                    href={buildQuery({
+                      minFee: undefined,
+                      maxFee: undefined,
+                      page: undefined,
+                    })}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    ৳{minFee ?? "0"}–৳{maxFee ?? "∞"}
+                    <X className="h-3 w-3 shrink-0" />
+                  </Link>
+                )}
+                <Link
+                  href={clearFiltersQuery}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                >
+                  Clear all
+                </Link>
+              </div>
+            )}
 
             {/* No results */}
             {doctors.length === 0 ? (
@@ -1047,13 +1324,17 @@ function MobileFilterForm({
       method="get"
       className="space-y-3"
     >
-      {q && (
+      {/* Search is editable inside filters too — not hidden */}
+      <FilterField label="Search keyword">
         <input
-          type="hidden"
+          type="search"
           name="q"
-          value={q}
+          defaultValue={q ?? ""}
+          placeholder="Name, hospital, area..."
+          autoComplete="off"
+          className="filter-input"
         />
-      )}
+      </FilterField>
 
       {/* Specialty */}
       <FilterField label="Specialty">
@@ -1078,7 +1359,14 @@ function MobileFilterForm({
       </FilterField>
 
       {/* Division */}
-      <FilterField label="Division">
+      <FilterField
+        label="Division"
+        hint={
+          districts.length === 0
+            ? "Select a division to unlock districts."
+            : undefined
+        }
+      >
         <select
           name="division"
           defaultValue={divisionSlug ?? ""}
@@ -1099,77 +1387,83 @@ function MobileFilterForm({
         </select>
       </FilterField>
 
-      {/* District */}
-      {districts.length > 0 && (
-        <FilterField label="District">
-          <select
-            name="district"
-            defaultValue={districtSlug ?? ""}
-            className="filter-select"
-          >
-            <option value="">
-              All Districts
+      {/* District — always visible */}
+      <FilterField
+        label="District"
+        hint={!divisionSlug ? "Select a division first." : undefined}
+      >
+        <select
+          name="district"
+          defaultValue={districtSlug ?? ""}
+          disabled={!divisionSlug || districts.length === 0}
+          className="filter-select disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+        >
+          <option value="">
+            {divisionSlug ? "All Districts" : "Select division first"}
+          </option>
+
+          {districts.map((d) => (
+            <option
+              key={d.id}
+              value={d.slug}
+            >
+              {d.name}
             </option>
+          ))}
+        </select>
+      </FilterField>
 
-            {districts.map((d) => (
-              <option
-                key={d.id}
-                value={d.slug}
-              >
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-      )}
+      {/* Upazila — always visible */}
+      <FilterField
+        label="Upazila / Thana"
+        hint={!districtSlug ? "Select a district first." : undefined}
+      >
+        <select
+          name="upazila"
+          defaultValue={upazilaSlug ?? ""}
+          disabled={!districtSlug || upazilas.length === 0}
+          className="filter-select disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+        >
+          <option value="">
+            {districtSlug ? "All Upazilas" : "Select district first"}
+          </option>
 
-      {/* Upazila */}
-      {upazilas.length > 0 && (
-        <FilterField label="Upazila / Thana">
-          <select
-            name="upazila"
-            defaultValue={upazilaSlug ?? ""}
-            className="filter-select"
-          >
-            <option value="">
-              All Upazilas
+          {upazilas.map((u) => (
+            <option
+              key={u.id}
+              value={u.slug}
+            >
+              {u.name}
             </option>
+          ))}
+        </select>
+      </FilterField>
 
-            {upazilas.map((u) => (
-              <option
-                key={u.id}
-                value={u.slug}
-              >
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-      )}
+      {/* Facility — always visible */}
+      <FilterField
+        label="Hospital / Facility"
+        hint={!upazilaSlug ? "Select an upazila first." : undefined}
+      >
+        <select
+          name="facility"
+          defaultValue={facilitySlug ?? ""}
+          disabled={!upazilaSlug || facilities.length === 0}
+          className="filter-select disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+        >
+          <option value="">
+            {upazilaSlug ? "All Facilities" : "Select upazila first"}
+          </option>
 
-      {/* Facility */}
-      {facilities.length > 0 && (
-        <FilterField label="Hospital / Facility">
-          <select
-            name="facility"
-            defaultValue={facilitySlug ?? ""}
-            className="filter-select"
-          >
-            <option value="">
-              All Facilities
+          {facilities.map((f) => (
+            <option
+              key={f.id}
+              value={f.slug}
+            >
+              {f.name}
             </option>
-
-            {facilities.map((f) => (
-              <option
-                key={f.id}
-                value={f.slug}
-              >
-                {f.name}
-              </option>
-            ))}
-          </select>
-        </FilterField>
-      )}
+          ))}
+        </select>
+      </FilterField>
 
       {/* Gender */}
       <FilterField label="Gender">
@@ -1266,9 +1560,11 @@ function FilterGroup({
 
 function FilterField({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -1278,6 +1574,10 @@ function FilterField({
       </label>
 
       {children}
+
+      {hint && (
+        <p className="mt-1 text-xs text-slate-400">{hint}</p>
+      )}
     </div>
   );
 }

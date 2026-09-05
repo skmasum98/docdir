@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Providers } from "./providers";
 import { Navigation } from "@/components/navigation";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -113,11 +114,7 @@ export default async function RootLayout({
         <Providers>
           <Navigation session={session} role={role} dbUserImage={dbUserImage} />
           <div className="flex-1">{children}</div>
-          <footer className="border-t border-slate-200 bg-white">
-            <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 text-sm text-slate-500">
-              Doctor Directory &copy; {new Date().getFullYear()}
-            </div>
-          </footer>
+          <SiteFooter />
         </Providers>
       </body>
     </html>

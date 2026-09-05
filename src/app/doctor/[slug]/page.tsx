@@ -77,7 +77,7 @@ export async function generateMetadata({
 
   const siteUrl =
     process.env.NEXTAUTH_URL ||
-    "https://doctordirectory.com";
+    "https://drchamber.info";
 
   const pageUrl =
     `${siteUrl}/doctor/${doctor.slug}`;
@@ -331,7 +331,7 @@ export default async function DoctorPage({
 
   const siteUrl =
     process.env.NEXTAUTH_URL ||
-    "https://doctordirectory.com";
+    "https://drchamber.info";
 
   const physicianSchema = {
     "@context": "https://schema.org",
