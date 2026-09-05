@@ -19,7 +19,7 @@ export function Navigation({ session, role, dbUserImage }: NavigationProps) {
     <header className="border-b border-slate-200 bg-white sticky top-0 z-40">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5">
         <Link href="/" className="text-lg sm:text-xl font-semibold text-slate-900 flex items-center gap-2 shrink-0">
-          Doctor Directory
+          Doctor Chamber
         </Link>
 
         {/* Desktop Navigation */}
