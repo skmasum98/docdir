@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -95,6 +96,9 @@ export default async function RootLayout({
   const session = await auth();
   const role = session?.user?.role;
 
+  // Google Analytics 4 — override via NEXT_PUBLIC_GA_ID env if needed
+  const gaId = "G-GE2QF417LX";
+
   let dbUserImage: string | null = null;
   if (session?.user?.id) {
     const u = await prisma.user.findUnique({
@@ -116,6 +120,23 @@ export default async function RootLayout({
           <div className="flex-1">{children}</div>
           <SiteFooter />
         </Providers>
+        {/* Google tag (gtag.js) */}
+        {gaId ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${gaId}');
+              `}
+            </Script>
+          </>
+        ) : null}
       </body>
     </html>
   );
