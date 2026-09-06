@@ -133,6 +133,25 @@ img {
   animation: slide-in-from-top 0.2s ease-out;
 }
 
+/* Doctor card entrance — subtle fade-up with stagger via inline animation-delay */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-card-enter {
+    animation: card-enter 0.45s ease-out both;
+  }
+}
+
 /* Print */
 @media print {
   header,

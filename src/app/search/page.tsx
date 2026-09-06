@@ -11,6 +11,7 @@ import {
   Clock3,
   ShieldCheck,
   SlidersHorizontal,
+  CalendarCheck,
 } from "lucide-react";
 
 export const metadata = {
@@ -1072,22 +1073,28 @@ export default async function SearchPage({ searchParams }: Props) {
             ) : (
               <div className="space-y-3 sm:space-y-4">
 
-                {doctors.map((d) => (
-                  <Link
+                {doctors.map((d, i) => (
+                  <article
                     key={d.id}
-                    href={`/doctor/${d.slug}`}
-                    className="group block min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:rounded-3xl sm:p-5 lg:p-6"
+                    style={{ animationDelay: `${Math.min(i, 11) * 45}ms` }}
+                    className="group block min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md animate-card-enter sm:rounded-3xl sm:p-5 lg:p-6"
                   >
                     {/* Main doctor row */}
                     <div className="flex min-w-0 items-start gap-3 sm:gap-4">
 
                       {/* Avatar */}
-                      <UserAvatar
-                        src={d.profilePhoto}
-                        name={d.fullName}
-                        size="lg"
-                        className="shrink-0 shadow-sm ring-2 ring-slate-100"
-                      />
+                      <Link
+                        href={`/doctor/${d.slug}`}
+                        aria-label={`View ${d.fullName}'s profile`}
+                        className="shrink-0 rounded-full transition-transform duration-200 hover:scale-105"
+                      >
+                        <UserAvatar
+                          src={d.profilePhoto}
+                          name={d.fullName}
+                          size="lg"
+                          className="shadow-sm ring-2 ring-slate-100 transition group-hover:ring-indigo-200"
+                        />
+                      </Link>
 
                       {/* Doctor information */}
                       <div className="min-w-0 flex-1">
@@ -1095,7 +1102,9 @@ export default async function SearchPage({ searchParams }: Props) {
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <p className="break-words text-base font-semibold leading-6 text-slate-900 transition-colors group-hover:text-indigo-600 sm:text-lg">
-                              {d.fullName}
+                              <Link href={`/doctor/${d.slug}`}>
+                                {d.fullName}
+                              </Link>
 
                               {d.isVerified && (
                                 <span className="ml-1.5 inline-flex translate-y-[-1px] items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 align-middle text-[10px] font-semibold text-emerald-700 sm:text-xs">
@@ -1189,7 +1198,24 @@ export default async function SearchPage({ searchParams }: Props) {
                         ))}
                       </div>
                     )}
-                  </Link>
+
+                    {/* Actions — profile + book serial */}
+                    <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 sm:ml-[68px] sm:flex-row">
+                      <Link
+                        href={`/doctor/${d.slug}`}
+                        className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] sm:text-sm"
+                      >
+                        View Profile
+                      </Link>
+                      <Link
+                        href={`/doctor/${d.slug}`}
+                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 text-xs font-bold text-white transition hover:bg-indigo-700 active:scale-[0.98] sm:text-sm"
+                      >
+                        <CalendarCheck className="h-4 w-4 shrink-0" />
+                        Book Serial
+                      </Link>
+                    </div>
+                  </article>
                 ))}
               </div>
             )}
