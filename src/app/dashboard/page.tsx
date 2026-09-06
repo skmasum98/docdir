@@ -190,550 +190,305 @@ export default async function DashboardPage({ searchParams }: Props) {
       const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
       return (
-        <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6">
           {saved && (
             <div
               className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
               role="alert"
             >
-              Profile updates saved successfully.
+              Saved successfully.
             </div>
           )}
 
-          {/* DOCTOR COMMAND CENTER HEADER */}
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-slate-100 pb-5">
-              <div className="flex items-start gap-4">
-                {/* Profile Photo / Avatar */}
-                <div className="relative shrink-0">
-                  {doctor.profilePhoto ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={doctor.profilePhoto}
-                      alt={doctor.fullName}
-                      className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover border-2 border-indigo-100 shadow-2xs"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-indigo-50 border-2 border-indigo-100 text-indigo-700 font-bold text-xl sm:text-2xl">
-                      {doctor.fullName.charAt(0)}
-                    </div>
-                  )}
-                  {doctor.bmdcNumber && (
-                    <span
-                      title={`Verified BMDC: ${doctor.bmdcNumber}`}
-                      className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs"
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                    </span>
-                  )}
-                </div>
-
-                {/* Doctor Identity */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                      {doctor.fullName}
-                    </h1>
-                    {doctor.specialty && (
-                      <span className="rounded-xl bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700">
-                        {doctor.specialty.name}
-                      </span>
-                    )}
+          {/* SIMPLE HEADER — who am I + 1 primary action */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                {doctor.profilePhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={doctor.profilePhoto}
+                    alt={doctor.fullName}
+                    className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl object-cover border-2 border-indigo-100"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-indigo-50 border-2 border-indigo-100 text-indigo-700 font-bold text-xl">
+                    {doctor.fullName.charAt(0)}
                   </div>
-
-                  <p className="text-xs sm:text-sm text-slate-600 font-medium">
-                    {[doctor.designation, doctor.degrees].filter(Boolean).join(" • ")}
-                  </p>
-
-                  <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap pt-1">
-                    {doctor.bmdcNumber && (
-                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                        <ShieldCheck className="h-3.5 w-3.5" /> BMDC: {doctor.bmdcNumber}
-                      </span>
-                    )}
-                    {(doctor.consultationFee ?? 0) > 0 && (
-                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                        Fee: ৳{doctor.consultationFee}
-                        {(doctor.followUpFee ?? 0) > 0 && ` (Follow-up: ৳${doctor.followUpFee})`}
-                      </span>
-                    )}
-                    {(doctor.hospitalName || doctor.chamberAddress) && (
-                      <span className="inline-flex items-center gap-1 text-slate-600">
-                        <Building2 className="h-3.5 w-3.5 text-indigo-600" />
-                        {doctor.hospitalName || doctor.chamberAddress?.split(",")[0]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start md:self-center">
-                <Link
-                  href={`/doctor/${doctor.slug}`}
-                  target="_blank"
-                  className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
-                  View Public Profile
-                </Link>
-
-                <Link
-                  href="/dashboard/profile"
-                  className="inline-flex items-center gap-1.5 rounded-2xl border border-indigo-200 bg-indigo-50/70 px-4 py-2 text-xs font-bold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
-                >
-                  <Edit3 className="h-3.5 w-3.5 text-indigo-700" />
-                  Edit Profile & Credentials
-                </Link>
-
-                <Link
-                  href="/dashboard/queue"
-                  className="inline-flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition shadow-xs"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  Today&apos;s Live Queue
-                </Link>
-              </div>
-            </div>
-
-            {/* QUICK KPI METRICS */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {/* Today's Queue */}
-              <Link
-                href="/dashboard/queue"
-                className="group rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3.5 hover:border-indigo-300 hover:bg-indigo-50/80 transition"
-              >
-                <div className="flex items-center justify-between text-indigo-700 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Today&apos;s Queue</span>
-                  <Users className="h-4 w-4 opacity-75" />
-                </div>
-                <p className="text-xl font-extrabold text-indigo-950">
-                  {bookedTodaySlots.length}
-                  <span className="text-xs font-medium text-indigo-700">/{totalTodaySlots}</span>
-                </p>
-                <p className="text-[10px] text-indigo-700/80 mt-0.5">
-                  {completedTodaySlots.length} completed
-                </p>
-              </Link>
-
-              {/* Upcoming Bookings */}
-              <Link
-                href="/dashboard/queue"
-                className="group rounded-2xl border border-slate-200 bg-white p-3.5 hover:border-slate-300 hover:shadow-2xs transition"
-              >
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Upcoming</span>
-                  <Calendar className="h-4 w-4 opacity-75" />
-                </div>
-                <p className="text-xl font-extrabold text-slate-900">{futureSlotsCount}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Booked in advance</p>
-              </Link>
-
-              {/* Active Chambers */}
-              <Link
-                href="/dashboard/schedules"
-                className="group rounded-2xl border border-slate-200 bg-white p-3.5 hover:border-slate-300 hover:shadow-2xs transition"
-              >
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Chambers</span>
-                  <Building2 className="h-4 w-4 opacity-75" />
-                </div>
-                <p className="text-xl font-extrabold text-slate-900">
-                  {doctor.doctorFacilities.length || (doctor.hospitalName ? 1 : 0)}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  {doctorSchedules.length} active shift{doctorSchedules.length !== 1 ? "s" : ""}
-                </p>
-              </Link>
-
-              {/* Chamber Staff */}
-              <Link
-                href="/dashboard/receptionists"
-                className="group rounded-2xl border border-slate-200 bg-white p-3.5 hover:border-slate-300 hover:shadow-2xs transition"
-              >
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Staff</span>
-                  <UserCheck className="h-4 w-4 opacity-75" />
-                </div>
-                <p className="text-xl font-extrabold text-slate-900">{receptionistsCount}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Assigned receptionists</p>
-              </Link>
-
-              {/* Patient Rating */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-3.5">
-                <div className="flex items-center justify-between text-amber-600 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Rating</span>
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-500 opacity-75" />
-                </div>
-                <p className="text-xl font-extrabold text-slate-900">
-                  {avgRating ? `${avgRating} ★` : "—"}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">{totalReviews} patient review{totalReviews !== 1 ? "s" : ""}</p>
-              </div>
-
-              {/* SMS Notification Center */}
-              <Link
-                href="/dashboard/sms"
-                className="group rounded-2xl border border-slate-200 bg-white p-3.5 hover:border-slate-300 hover:shadow-2xs transition"
-              >
-                <div className="flex items-center justify-between text-slate-500 mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">SMS Credits</span>
-                  <MessageSquare className="h-4 w-4 opacity-75" />
-                </div>
-                <p className="text-xl font-extrabold text-slate-900">
-                  {smsBalance ? Math.max(0, smsBalance.totalCredits - smsBalance.usedCredits) : 0}
-                </p>
-                <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">Automated alerts</p>
-              </Link>
-            </div>
-          </section>
-
-          {/* TODAY'S LIVE QUEUE SNAPSHOT */}
-          <section className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/90 via-blue-50/50 to-white p-5 sm:p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
-                  <Clock className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                    Today&apos;s Consultation Sessions
-                    <span className="text-xs font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-full">
-                      {formatDhakaDate(todayUTC, { weekday: "short", day: "numeric", month: "short" })}
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-600">
-                    Live patient flow & queue progression
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/dashboard/queue"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition shadow-xs"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  Open Live Queue
-                </Link>
-              </div>
-            </div>
-
-            {totalTodaySlots > 0 ? (
-              <div className="rounded-2xl bg-white border border-indigo-100 p-4 sm:p-5 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Current Status */}
-                  <div className="rounded-xl bg-indigo-50/60 p-3.5 border border-indigo-100 space-y-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">
-                      Currently In Consultation
-                    </p>
-                    {inProgressSlot ? (
-                      <div>
-                        <p className="text-base font-bold text-slate-900">
-                          Serial #{inProgressSlot.serialNumber} • {inProgressSlot.appointment?.patientName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {inProgressSlot.facility?.name || "Chamber"} ({formatDhakaTime(inProgressSlot.startTime)})
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500 italic">No patient in room right now</p>
-                    )}
-                  </div>
-
-                  {/* Next in Line */}
-                  <div className="rounded-xl bg-amber-50/60 p-3.5 border border-amber-100 space-y-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
-                      Next Up in Queue
-                    </p>
-                    {nextUpSlot ? (
-                      <div>
-                        <p className="text-base font-bold text-slate-900">
-                          Serial #{nextUpSlot.serialNumber} • {nextUpSlot.appointment?.patientName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {nextUpSlot.facility?.name || "Chamber"} ({formatDhakaTime(nextUpSlot.startTime)})
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500 italic">
-                        {bookedTodaySlots.length > 0
-                          ? "All booked patients completed!"
-                          : "No patients booked yet today"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-                    <span>Queue Progress</span>
-                    <span>
-                      {completedTodaySlots.length} of {bookedTodaySlots.length} patients seen (
-                      {bookedTodaySlots.length > 0
-                        ? Math.round((completedTodaySlots.length / bookedTodaySlots.length) * 100)
-                        : 0}
-                      %)
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-500"
-                      style={{
-                        width: `${
-                          bookedTodaySlots.length > 0
-                            ? (completedTodaySlots.length / bookedTodaySlots.length) * 100
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-white border border-indigo-100 p-6 text-center space-y-2">
-                <p className="text-sm font-semibold text-slate-700">
-                  No consultation slots generated for today ({formatDhakaDate(todayUTC, { weekday: "long" })})
-                </p>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  If you have chamber hours today, generate your slots to allow online and walk-in patient bookings.
-                </p>
-                <div className="pt-2">
-                  <Link
-                    href="/dashboard/schedules"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition"
+                )}
+                {doctor.bmdcNumber && (
+                  <span
+                    title={`Verified BMDC: ${doctor.bmdcNumber}`}
+                    className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white"
                   >
-                    <Calendar className="h-3.5 w-3.5" />
-                    Configure Chamber Schedules
-                  </Link>
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-slate-500">
+                  {formatDhakaDate(todayUTC, { weekday: "long", day: "numeric", month: "short" })}
+                </p>
+                <h1 className="truncate text-lg sm:text-xl font-bold text-slate-900">
+                  Assalamu Alaikum, Dr. {doctor.fullName.replace(/^Dr\.?\s*/i, "")}
+                </h1>
+                <p className="truncate text-xs sm:text-sm text-slate-600">
+                  {bookedTodaySlots.length > 0
+                    ? `Today: ${bookedTodaySlots.length} patients • ${completedTodaySlots.length} done`
+                    : totalTodaySlots > 0
+                      ? "No patients booked yet today"
+                      : "No chamber today"}
+                  {doctor.specialty ? ` • ${doctor.specialty.name}` : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* ONE big action — today's queue */}
+            <Link
+              href="/dashboard/queue"
+              className="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3.5 text-base font-bold text-white transition hover:bg-indigo-700 active:scale-[0.99]"
+            >
+              <Play className="h-5 w-5" />
+              {totalTodaySlots > 0 ? "Open Today's Patients" : "Open Queue & Schedules"}
+            </Link>
+
+            {/* Now / Next — plain language, only when relevant */}
+            {totalTodaySlots > 0 && (
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+                    Now seeing
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-slate-900">
+                    {inProgressSlot
+                      ? `Serial #${inProgressSlot.serialNumber} — ${inProgressSlot.appointment?.patientName}`
+                      : "Nobody in room yet"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                    Next patient
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-slate-900">
+                    {nextUpSlot
+                      ? `Serial #${nextUpSlot.serialNumber} — ${nextUpSlot.appointment?.patientName}`
+                      : bookedTodaySlots.length > 0
+                        ? "All done for today ✓"
+                        : "No bookings yet"}
+                  </p>
                 </div>
               </div>
             )}
+
+            {bookedTodaySlots.length > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                  <span>
+                    {completedTodaySlots.length} of {bookedTodaySlots.length} done
+                  </span>
+                  <span>
+                    {Math.round((completedTodaySlots.length / bookedTodaySlots.length) * 100)}%
+                  </span>
+                </div>
+                <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-500"
+                    style={{
+                      width: `${(completedTodaySlots.length / bookedTodaySlots.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {totalTodaySlots === 0 && (
+              <Link
+                href="/dashboard/schedules"
+                className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                <Calendar className="h-4 w-4" />
+                Set chamber days & times
+              </Link>
+            )}
           </section>
 
-          {/* QUICK PRACTICE HUBS & ACTION TILES */}
-          <section className="space-y-3">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-indigo-600" /> Practice Management Portal
+          {/* 3 BIG BUTTONS — the only things most doctors need daily */}
+          <section>
+            <h2 className="mb-2 text-sm font-bold text-slate-900">
+              What do you want to do?
             </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* 1. Queue Management */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Link
                 href="/dashboard/queue"
-                className="group rounded-3xl border border-slate-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition flex flex-col justify-between space-y-4"
+                className="flex min-h-24 items-center gap-4 rounded-3xl border-2 border-indigo-200 bg-indigo-50/50 p-5 transition hover:border-indigo-400 hover:bg-indigo-50 active:scale-[0.99]"
               >
-                <div className="space-y-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition shadow-2xs">
-                    <Users className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                    Live Queue & Calling
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Live patient queue, calling next serial, booking walk-ins, and handling no-shows across all chambers.
-                  </p>
-                </div>
-                <div className="flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition">
-                  Open Queue Manager <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white">
+                  <Users className="h-6 w-6" />
+                </span>
+                <span>
+                  <span className="block text-base font-bold text-slate-900">
+                    Today&apos;s Patients
+                  </span>
+                  <span className="block text-xs text-slate-600">
+                    {bookedTodaySlots.length} booked today
+                    {futureSlotsCount > 0 && ` • ${futureSlotsCount} later`} • call next, walk-ins
+                  </span>
+                </span>
               </Link>
 
-              {/* 2. Schedules & Shifts */}
               <Link
                 href="/dashboard/schedules"
-                className="group rounded-3xl border border-slate-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition flex flex-col justify-between space-y-4"
+                className="flex min-h-24 items-center gap-4 rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm active:scale-[0.99]"
               >
-                <div className="space-y-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition shadow-2xs">
-                    <Calendar className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                    Chambers & Visiting Hours
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Set weekly chamber days, session hours, patient quotas, off days, and auto-generate appointment slots.
-                  </p>
-                </div>
-                <div className="flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition">
-                  Manage Schedules <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                  <Calendar className="h-6 w-6" />
+                </span>
+                <span>
+                  <span className="block text-base font-bold text-slate-900">
+                    My Chambers
+                  </span>
+                  <span className="block text-xs text-slate-600">
+                    {doctorSchedules.length} active shift{doctorSchedules.length !== 1 ? "s" : ""} • days & times
+                  </span>
+                </span>
               </Link>
 
-              {/* 3. Chamber Staff / Receptionists */}
               <Link
                 href="/dashboard/receptionists"
-                className="group rounded-3xl border border-slate-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition flex flex-col justify-between space-y-4"
+                className="flex min-h-24 items-center gap-4 rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm active:scale-[0.99]"
               >
-                <div className="space-y-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition shadow-2xs">
-                    <UserCheck className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                    Chamber Staff & Receptionists
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Assign chamber assistants, manage reception staff logins, and set walk-in and cancellation permissions.
-                  </p>
-                </div>
-                <div className="flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition">
-                  Manage Chamber Staff <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </div>
-              </Link>
-
-              {/* 4. SMS Alerts Center */}
-              <Link
-                href="/dashboard/sms"
-                className="group rounded-3xl border border-slate-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition shadow-2xs">
-                    <MessageSquare className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                    SMS Notification Center
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Automated SMS confirmations, live queue alerts, serial reminders, and broadcast announcements.
-                  </p>
-                </div>
-                <div className="flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition">
-                  View SMS Gateway <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </div>
-              </Link>
-
-              {/* 5. Doctor Profile & Credentials */}
-              <Link
-                href="/dashboard/profile"
-                className="group rounded-3xl border border-slate-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition shadow-2xs">
-                    <Stethoscope className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                    Doctor Profile & Credentials
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Update BMDC registration, medical degrees, consultation fees, bio, clinical focus, and chamber addresses.
-                  </p>
-                </div>
-                <div className="flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition">
-                  Edit Doctor Profile <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </div>
-              </Link>
-
-              {/* 6. Account & Password Settings */}
-              <Link
-                href="/dashboard/profile"
-                className="group rounded-3xl border border-slate-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition shadow-2xs">
-                    <Settings className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                    Account Security & Picture
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Update profile picture, change password, manage login phone number, email address, and security.
-                  </p>
-                </div>
-                <div className="flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition">
-                  Account Settings <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-700 text-white">
+                  <UserCheck className="h-6 w-6" />
+                </span>
+                <span>
+                  <span className="block text-base font-bold text-slate-900">
+                    My Staff
+                  </span>
+                  <span className="block text-xs text-slate-600">
+                    {receptionistsCount} helper{receptionistsCount !== 1 ? "s" : ""} • they handle serials for you
+                  </span>
+                </span>
               </Link>
             </div>
           </section>
 
-          {/* CHAMBERS & VISITING SCHEDULES SUMMARY */}
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-indigo-600" />
-                  Your Chamber Locations & Shift Hours
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Regular visiting schedules published to patients
-                </p>
-              </div>
+          {/* SECONDARY — smaller, less urgent */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+            <p className="px-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+              More Settings & Info
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Link
-                href="/dashboard/schedules"
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                href={`/doctor/${doctor.slug}`}
+                target="_blank"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
               >
-                Manage All →
+                <ExternalLink className="h-3.5 w-3.5" />
+                My public page
               </Link>
+              <Link
+                href="/dashboard/profile"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Edit profile
+              </Link>
+              <Link
+                href="/dashboard/sms"
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                SMS ({smsBalance ? Math.max(0, smsBalance.totalCredits - smsBalance.usedCredits) : 0})
+              </Link>
+              <span className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-600">
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+                {avgRating ? `${avgRating} ★ (${totalReviews})` : "No reviews yet"}
+              </span>
             </div>
+            {(doctor.consultationFee ?? 0) > 0 && (
+              <p className="mt-2 px-1 text-xs text-slate-500">
+                Fee: ৳{doctor.consultationFee}
+                {(doctor.followUpFee ?? 0) > 0 && ` • Follow-up: ৳${doctor.followUpFee}`}
+                {doctor.bmdcNumber && ` • BMDC: ${doctor.bmdcNumber}`} —{" "}
+                <Link href="/dashboard/profile" className="font-bold text-indigo-600 hover:underline">
+                  change
+                </Link>
+              </p>
+            )}
+          </section>
+
+          {/* CHAMBERS DETAIL — collapsed by default */}
+          <details className="group rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Building2 className="h-4 w-4 text-indigo-600" />
+                My chamber days & times ({doctorSchedules.length})
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
+            </summary>
 
             {doctorSchedules.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {doctorSchedules.map((sch) => (
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                {doctorSchedules.slice(0, 4).map((sch) => (
                   <div
                     key={sch.id}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 space-y-1.5"
+                    className="flex items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-3"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-slate-900">
-                        {dayNames[sch.dayOfWeek]}
-                      </span>
-                      <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-800">
-                        {sch.startTime} – {sch.endTime}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-600 flex items-center gap-1 font-medium">
-                      <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                      {sch.facility?.name || doctor.hospitalName || "Chamber"}
-                    </p>
-                    {sch.facility?.address && (
-                      <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-slate-400" />
-                        {sch.facility.address}
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900">
+                        {dayNames[sch.dayOfWeek]} • {sch.startTime} – {sch.endTime}
                       </p>
-                    )}
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
-                      <span>Max quota: {sch.maxPatients} patients</span>
-                      <span>Slot interval: {sch.slotDuration} min</span>
+                      <p className="truncate text-xs text-slate-500">
+                        {sch.facility?.name || doctor.hospitalName || "Chamber"} • max {sch.maxPatients}
+                      </p>
                     </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
                   </div>
                 ))}
+                {doctorSchedules.length > 4 && (
+                  <p className="px-1 text-xs text-slate-500">
+                    + {doctorSchedules.length - 4} more shifts
+                  </p>
+                )}
+                <Link
+                  href="/dashboard/schedules"
+                  className="flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700"
+                >
+                  Change days & times
+                </Link>
               </div>
             ) : (
-              <div className="rounded-2xl bg-slate-50 p-6 text-center space-y-2">
+              <div className="mt-3 rounded-2xl bg-slate-50 p-5 text-center">
                 <p className="text-xs font-semibold text-slate-700">
-                  No active chamber schedules set up yet.
+                  No chamber days set yet.
                 </p>
                 <Link
                   href="/dashboard/schedules"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline"
+                  className="mt-2 inline-flex min-h-11 items-center gap-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-700"
                 >
-                  Add Chamber Schedule & Times →
+                  Add chamber days →
                 </Link>
               </div>
             )}
-          </section>
+          </details>
 
-          {/* RECENT PATIENT REVIEWS */}
+          {/* REVIEWS — collapsed, doctors rarely need this daily */}
           {doctorReviews.length > 0 && (
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <Star className="h-5 w-5 text-amber-500 fill-amber-400" />
-                    Recent Patient Feedback & Ratings ({totalReviews})
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Reviews left by patients who booked consultations
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
+            <details className="group rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <Star className="h-4 w-4 text-amber-500 fill-amber-400" />
+                  Patient reviews ({totalReviews}
+                  {avgRating ? ` • ${avgRating} ★` : ""})
+                </span>
+                <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="mt-3 space-y-2">
                 {doctorReviews.map((rev) => (
                   <div
                     key={rev.id}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-2"
+                    className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
@@ -747,7 +502,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                             }`}
                           />
                         ))}
-                        <span className="text-xs font-bold text-slate-700 ml-1.5">
+                        <span className="ml-1.5 text-xs font-bold text-slate-700">
                           {rev.rating}.0
                         </span>
                       </div>
@@ -756,14 +511,14 @@ export default async function DashboardPage({ searchParams }: Props) {
                       </span>
                     </div>
                     {rev.comment && (
-                      <p className="text-xs text-slate-700 leading-relaxed italic">
+                      <p className="mt-1 text-xs italic leading-relaxed text-slate-700">
                         &ldquo;{rev.comment}&rdquo;
                       </p>
                     )}
                   </div>
                 ))}
               </div>
-            </section>
+            </details>
           )}
         </main>
       );
