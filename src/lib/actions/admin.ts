@@ -263,6 +263,36 @@ export async function deleteFacilityAction(formData: FormData): Promise<void> {
   revalidatePath("/search");
 }
 
+export async function bulkDeleteFacilitiesAction(
+  ids: number[]
+): Promise<{ ok: boolean; message: string; deleted?: number }> {
+  await requireAdmin();
+  const cleanIds = Array.from(
+    new Set(
+      (Array.isArray(ids) ? ids : [])
+        .map((v) => Number(v))
+        .filter((v) => Number.isFinite(v) && v > 0)
+    )
+  );
+  if (cleanIds.length === 0) {
+    return { ok: false, message: "No facilities selected." };
+  }
+  if (cleanIds.length > 100) {
+    return { ok: false, message: "You can delete up to 100 facilities at a time." };
+  }
+  const result = await prisma.facility.deleteMany({
+    where: { id: { in: cleanIds } },
+  });
+  revalidatePath("/admin/facilities");
+  revalidatePath("/facilities");
+  revalidatePath("/search");
+  return {
+    ok: true,
+    message: `${result.count} facilit${result.count === 1 ? "y" : "ies"} deleted.`,
+    deleted: result.count,
+  };
+}
+
 export async function createDoctorAction(
   _prev: FormState | undefined,
   formData: FormData,

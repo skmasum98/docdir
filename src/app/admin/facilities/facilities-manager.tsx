@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import {
@@ -24,7 +24,7 @@ import {
   FlaskConical,
   ExternalLink,
 } from "lucide-react";
-import { createFacilityAction, updateFacilityAction, deleteFacilityAction } from "@/lib/actions/admin";
+import { createFacilityAction, updateFacilityAction, deleteFacilityAction, bulkDeleteFacilitiesAction } from "@/lib/actions/admin";
 import { initialFormState, fieldError } from "@/lib/form";
 import { FacilityType } from "@/lib/enums";
 import { FacilityLogo } from "@/components/facility-logo";
@@ -107,6 +107,11 @@ export default function FacilitiesManager({
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingFacility, setEditingFacility] = useState<FacilityData | null>(null);
 
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkMessage, setBulkMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [isBulkDeleting, startBulkDelete] = useTransition();
+
   // Actions
   const [createState, createAction, createPending] = useActionState(createFacilityAction, initialFormState);
   const [updateState, updateAction, updatePending] = useActionState(updateFacilityAction, initialFormState);
@@ -146,6 +151,75 @@ export default function FacilitiesManager({
       return true;
     });
   }, [facilities, typeFilter, districtFilter, searchTerm]);
+
+  const selectedCount = selectedIds.size;
+  const filteredIds = useMemo(
+    () => filteredFacilities.map((f) => f.id),
+    [filteredFacilities]
+  );
+  const filteredSelectedCount = useMemo(
+    () => filteredIds.filter((id) => selectedIds.has(id)).length,
+    [filteredIds, selectedIds]
+  );
+  const allFilteredSelected =
+    filteredIds.length > 0 && filteredSelectedCount === filteredIds.length;
+
+  const toggleOne = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setBulkMessage(null);
+  };
+
+  const toggleAllFiltered = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+    setBulkMessage(null);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedCount === 0 || isBulkDeleting) return;
+    const selected = facilities.filter((f) => selectedIds.has(f.id));
+    const linkedDoctors = selected.reduce((s, f) => s + (f.doctorCount || 0), 0);
+    const linkedTests = selected.reduce((s, f) => s + (f.testCount || 0), 0);
+    const names = selected
+      .slice(0, 5)
+      .map((f) => `• ${f.name}`)
+      .join("\n");
+    const more = selected.length > 5 ? `\n...and ${selected.length - 5} more` : "";
+    const warning =
+      linkedDoctors > 0 || linkedTests > 0
+        ? `\n\nWarning: this will also remove ${linkedDoctors} doctor link(s) and ${linkedTests} test record(s).`
+        : "";
+    if (
+      !confirm(
+        `Delete ${selected.length} facilit${selected.length === 1 ? "y" : "ies"}?\n${names}${more}${warning}\n\nThis cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    startBulkDelete(async () => {
+      const res = await bulkDeleteFacilitiesAction(Array.from(selectedIds));
+      if (res.ok) {
+        const deletedSet = new Set(selectedIds);
+        setFacilities((prev) => prev.filter((f) => !deletedSet.has(f.id)));
+        setSelectedIds(new Set());
+        setBulkMessage({ ok: true, text: res.message });
+      } else {
+        setBulkMessage({ ok: false, text: res.message });
+      }
+    });
+  };
 
   const inputCls =
     "w-full rounded-2xl border border-slate-300 px-4 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none";
@@ -519,6 +593,59 @@ export default function FacilitiesManager({
         </div>
       </div>
 
+      {/* Bulk actions bar */}
+      {selectedCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-3xl border border-amber-200 bg-amber-50 px-5 py-3.5 shadow-sm">
+          <div className="flex items-center gap-2 text-sm">
+            <Check className="h-4 w-4 text-amber-700" />
+            <span className="font-semibold text-amber-900">
+              {selectedCount} facilit{selectedCount === 1 ? "y" : "ies"} selected
+            </span>
+            {filteredSelectedCount !== selectedCount && (
+              <span className="text-xs text-amber-700">
+                ({filteredSelectedCount} in current view)
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedIds(new Set());
+                setBulkMessage(null);
+              }}
+              disabled={isBulkDeleting}
+              className="rounded-xl border border-amber-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition disabled:opacity-60 cursor-pointer"
+            >
+              Clear selection
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition disabled:opacity-60 cursor-pointer"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {isBulkDeleting
+                ? "Deleting..."
+                : `Delete selected (${selectedCount})`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {bulkMessage && (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm ${
+            bulkMessage.ok
+              ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+              : "border-rose-300 bg-rose-50 text-rose-900"
+          }`}
+        >
+          {bulkMessage.text}
+        </div>
+      )}
+
       {/* Facilities Table */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
@@ -532,6 +659,8 @@ export default function FacilitiesManager({
                 setSearchTerm("");
                 setTypeFilter("ALL");
                 setDistrictFilter("ALL");
+                setSelectedIds(new Set());
+                setBulkMessage(null);
               }}
               className="text-xs font-medium text-indigo-600 hover:underline"
             >
@@ -544,6 +673,23 @@ export default function FacilitiesManager({
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3.5 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    ref={(el) => {
+                      if (el) {
+                        el.indeterminate =
+                          filteredSelectedCount > 0 && !allFilteredSelected;
+                      }
+                    }}
+                    onChange={toggleAllFiltered}
+                    disabled={filteredIds.length === 0}
+                    aria-label="Select all facilities in view"
+                    title="Select all in view"
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-40"
+                  />
+                </th>
                 <th className="px-6 py-3.5">Facility Name & Type</th>
                 <th className="px-6 py-3.5">Location & Address</th>
                 <th className="px-6 py-3.5">Phone / Contact</th>
@@ -555,6 +701,15 @@ export default function FacilitiesManager({
             <tbody className="divide-y divide-slate-100">
               {filteredFacilities.map((facility) => (
                 <tr key={facility.id} className="hover:bg-slate-50/70 transition">
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(facility.id)}
+                      onChange={() => toggleOne(facility.id)}
+                      aria-label={`Select ${facility.name}`}
+                      className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <FacilityLogo
@@ -679,7 +834,7 @@ export default function FacilitiesManager({
 
               {filteredFacilities.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     <Building2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                     <p className="font-semibold text-slate-800">No facilities found</p>
                     <p className="text-xs text-slate-400 mt-1">
