@@ -522,8 +522,87 @@ export default async function DashboardPage({ searchParams }: Props) {
           )}
         </main>
       );
+    } else if (role === UserRole.ADMIN) {
+      // Admin without a linked doctor profile — show an admin hub
+      // (previously a dead-end "Doctor Profile Not Linked" page with no path to /admin)
+      const adminLinks = [
+        { href: "/admin", label: "Overview", desc: "Site stats & moderation" },
+        { href: "/admin/doctors", label: "Doctors", desc: "Verify & manage doctors" },
+        { href: "/admin/doctors/import", label: "Bulk Import", desc: "Import doctors in bulk" },
+        { href: "/admin/facilities", label: "Facilities", desc: "Hospitals & labs" },
+        { href: "/admin/users", label: "Users", desc: "Roles & accounts" },
+        { href: "/admin/claims", label: "Claims", desc: "Profile claim requests" },
+        { href: "/admin/reviews", label: "Reviews", desc: "Patient reviews" },
+        { href: "/admin/specialties", label: "Specialties", desc: "Departments list" },
+        { href: "/admin/regions", label: "Regions", desc: "Divisions & districts" },
+      ];
+      return (
+        <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+            <div className="flex items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                <ShieldCheck className="h-6 w-6" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+                  Admin Panel
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-600">
+                  Welcome, {currentUser.name || "Admin"} — manage the whole directory from here.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/admin"
+              className="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-base font-bold text-white transition hover:bg-slate-800 active:scale-[0.99]"
+            >
+              Open Admin Panel
+              <ChevronRight className="h-5 w-5" />
+            </Link>
+          </section>
+
+          <section>
+            <h2 className="mb-2 text-sm font-bold text-slate-900">
+              Quick links
+            </h2>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {adminLinks.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="flex min-h-14 items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-400 hover:shadow-sm active:scale-[0.99]"
+                >
+                  <span>
+                    <span className="block text-sm font-bold text-slate-900">
+                      {l.label}
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      {l.desc}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                </Link>
+              ))}
+              <Link
+                href="/dashboard/profile"
+                className="flex min-h-14 items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-400 hover:shadow-sm active:scale-[0.99]"
+              >
+                <span>
+                  <span className="block text-sm font-bold text-slate-900">
+                    Account Settings
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    Password & profile picture
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+              </Link>
+            </div>
+          </section>
+        </main>
+      );
     } else {
-      // Admin without doctor profile or Doctor with unclaimed profile
+      // Doctor with unclaimed profile
       return (
         <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8 space-y-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center space-y-4">
