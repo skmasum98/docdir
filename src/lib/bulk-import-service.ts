@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { slugify } from "@/lib/slug";
+import { slugify, stripTitlePrefix } from "@/lib/slug";
 import { DoctorStatus, FacilityType } from "@/lib/enums";
 
 export type BulkDoctorRow = {
@@ -459,8 +459,11 @@ export class BulkImportService {
               updated++;
             }
           } else {
-            // Create New Doctor with unique deterministic slug
-            const baseSlug = slugify(`dr-${rawName}`);
+            // Create New Doctor with unique deterministic slug.
+            // Strip any leading "Dr./Prof." from the raw name first —
+            // the name may already contain "Dr", so prefixing blindly
+            // produced slugs like `dr-dr-a-a-m-...`.
+            const baseSlug = slugify(`dr-${stripTitlePrefix(rawName)}`);
             const areaSlug = row.upazila ? `-${slugify(row.upazila)}` : "";
             const uniqueSuffix = `${Date.now().toString(36).slice(-4)}${Math.random().toString(36).substring(2, 6)}`;
             const candidateSlug = `${baseSlug}${areaSlug}-${uniqueSuffix}`;
