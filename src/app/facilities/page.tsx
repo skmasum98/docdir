@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Prerender + refresh hourly (admin/facility edits revalidate on demand).
+export const revalidate = 3600;
+
 export default async function FacilitiesPage() {
   const [facilities, divisions, totalDoctors, totalDbTests] = await Promise.all([
     prisma.facility.findMany({

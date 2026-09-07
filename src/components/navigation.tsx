@@ -2,24 +2,23 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { Menu, X, Search } from "lucide-react";
 import { UserAvatar } from "@/components/user-avatar";
 import SignOutButton from "@/app/sign-out-button";
 
-interface NavigationProps {
-  session: any;
-  role?: string;
-  dbUserImage: string | null;
-}
-
-export function Navigation({ session, role, dbUserImage }: NavigationProps) {
+export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
+  const role = session?.user?.role;
+  const dbUserImage = session?.user?.image ?? null;
+  const loadingSession = status === "loading";
 
   return (
     <header className="border-b border-slate-200 bg-white sticky top-0 z-40">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5">
         <Link href="/" className="text-lg sm:text-xl font-semibold text-slate-900 flex items-center gap-2 shrink-0">
-          Doctor Chamber
+          Doctor Directory
         </Link>
 
         {/* Desktop Navigation */}
@@ -44,50 +43,56 @@ export function Navigation({ session, role, dbUserImage }: NavigationProps) {
               Admin
             </Link>
           )}
-          {session?.user && (
-            <Link
-              href="/dashboard"
-              className="rounded-2xl border border-indigo-300 bg-indigo-50 px-3.5 py-1.5 font-semibold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
-            >
-              {role === "DOCTOR"
-                ? "Doctor Portal"
-                : role === "FACILITY_ADMIN"
-                ? "Hospital Portal"
-                : "Dashboard"}
-            </Link>
-          )}
-          {session?.user ? (
-            <div className="flex items-center gap-3 pl-2">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 rounded-2xl hover:bg-slate-100/80 p-1 transition"
-                title="Your Account"
-              >
-                <UserAvatar
-                  src={dbUserImage || session.user.image}
-                  name={session.user.name}
-                  size="sm"
-                />
-                <span className="hidden text-slate-700 font-medium text-xs sm:inline">
-                  {session.user.name || session.user.email}
-                </span>
-              </Link>
-              <SignOutButton />
-            </div>
+          {loadingSession ? (
+            <span className="h-9 w-48 animate-pulse rounded-2xl bg-slate-100" aria-hidden />
           ) : (
             <>
-              <Link
-                href="/login"
-                className="rounded-2xl border border-slate-300 px-4 py-2 font-medium text-slate-900 hover:bg-slate-50 transition"
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-2xl bg-slate-950 px-4 py-2 font-semibold text-white hover:bg-slate-800 transition"
-              >
-                Register
-              </Link>
+              {session?.user && (
+                <Link
+                  href="/dashboard"
+                  className="rounded-2xl border border-indigo-300 bg-indigo-50 px-3.5 py-1.5 font-semibold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
+                >
+                  {role === "DOCTOR"
+                    ? "Doctor Portal"
+                    : role === "FACILITY_ADMIN"
+                    ? "Hospital Portal"
+                    : "Dashboard"}
+                </Link>
+              )}
+              {session?.user ? (
+                <div className="flex items-center gap-3 pl-2">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 rounded-2xl hover:bg-slate-100/80 p-1 transition"
+                    title="Your Account"
+                  >
+                    <UserAvatar
+                      src={dbUserImage || session.user.image}
+                      name={session.user.name}
+                      size="sm"
+                    />
+                    <span className="hidden text-slate-700 font-medium text-xs sm:inline">
+                      {session.user.name || session.user.email}
+                    </span>
+                  </Link>
+                  <SignOutButton />
+                </div>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="rounded-2xl border border-slate-300 px-4 py-2 font-medium text-slate-900 hover:bg-slate-50 transition"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="rounded-2xl bg-slate-950 px-4 py-2 font-semibold text-white hover:bg-slate-800 transition"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
             </>
           )}
         </div>
@@ -132,21 +137,21 @@ export function Navigation({ session, role, dbUserImage }: NavigationProps) {
                 Admin Panel
               </Link>
             )}
-            {session?.user && (
-              <Link
-                href="/dashboard"
-                className="block rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 font-semibold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {role === "DOCTOR"
-                  ? "Doctor Portal"
-                  : role === "FACILITY_ADMIN"
-                  ? "Hospital Portal"
-                  : "My Dashboard"}
-              </Link>
-            )}
-            {session?.user ? (
+            {loadingSession ? (
+              <span className="block h-12 animate-pulse rounded-2xl bg-slate-100" aria-hidden />
+            ) : session?.user ? (
               <>
+                <Link
+                  href="/dashboard"
+                  className="block rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 font-semibold text-indigo-900 hover:bg-indigo-100 transition shadow-2xs"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {role === "DOCTOR"
+                    ? "Doctor Portal"
+                    : role === "FACILITY_ADMIN"
+                    ? "Hospital Portal"
+                    : "My Dashboard"}
+                </Link>
                 <Link
                   href="/dashboard"
                   className="block flex items-center gap-3 rounded-2xl p-3 hover:bg-slate-50 transition"

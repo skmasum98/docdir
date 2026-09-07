@@ -18,11 +18,7 @@ export default async function proxy(request: NextRequest) {
   );
 
   if (!isProtected && !isAdminRoute) {
-    const response = NextResponse.next();
-
-    addSecurityHeaders(response);
-
-    return response;
+    return NextResponse.next();
   }
 
   const token = await getToken({
@@ -43,36 +39,12 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  const response = NextResponse.next();
-
-  addSecurityHeaders(response);
-
-  return response;
-}
-
-function addSecurityHeaders(response: NextResponse) {
-  response.headers.set("X-Frame-Options", "SAMEORIGIN");
-
-  response.headers.set(
-    "X-Content-Type-Options",
-    "nosniff"
-  );
-
-  response.headers.set(
-    "Referrer-Policy",
-    "strict-origin-when-cross-origin"
-  );
-
-  response.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
-  );
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  // Only run the edge middleware where auth is actually needed.
+  // Public pages skip it entirely (faster TTFB); global security headers
+  // for all routes live in next.config.ts instead.
+  matcher: ["/dashboard/:path*", "/admin/:path*"],
 };

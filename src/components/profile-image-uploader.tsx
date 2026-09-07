@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Upload, Trash2, Loader2, Camera, Check } from "lucide-react";
 import { UserAvatar } from "./user-avatar";
@@ -33,6 +34,16 @@ export function ProfileImageUploader({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { update: refreshSession } = useSession();
+
+  // Keep the navigation avatar in sync (JWT image) without forcing re-login.
+  async function syncSessionImage(url: string | null) {
+    try {
+      await refreshSession?.({ user: { image: url } } as any);
+    } catch {
+      // Session refresh is best-effort; the upload itself already succeeded.
+    }
+  }
 
   async function handleFileUpload(file: File) {
     if (!file) return;
@@ -62,6 +73,7 @@ export function ProfileImageUploader({
         if (result?.data?.imageUrl) {
           setImageUrl(result.data.imageUrl);
           onImageUploaded?.(result.data.imageUrl);
+          await syncSessionImage(result.data.imageUrl);
         }
       } else {
         // Upload via API route
@@ -81,6 +93,7 @@ export function ProfileImageUploader({
 
         setImageUrl(data.url);
         onImageUploaded?.(data.url);
+        await syncSessionImage(data.url);
 
         // If autoSave is enabled, also trigger the update action if available
         if (autoSave) {
@@ -132,6 +145,7 @@ export function ProfileImageUploader({
 
       setImageUrl(null);
       onImageUploaded?.(null);
+      await syncSessionImage(null);
       setSuccessMessage("Profile photo removed.");
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {

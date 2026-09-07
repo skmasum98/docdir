@@ -2,11 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import ReviewForm from "./review-form";
+import { ClaimBannerGate, OwnerEditLink } from "./doctor-session-gates";
 import { UserAvatar } from "@/components/user-avatar";
 import { DoctorShareButton } from "@/components/doctor-share-button";
-import { DoctorClaimBanner } from "@/components/doctor-claim-banner";
 import { FacilityLogo } from "@/components/facility-logo";
 import BookingModal from "@/components/booking-modal";
 
@@ -33,6 +32,23 @@ import {
 type Props = {
   params: Promise<{ slug: string }>;
 };
+
+// Cache prerendered profile pages for 1h (revalidated on-demand when
+// doctors/bookings change). Session-dependent bits (booking prefill,
+// owner links, review gate) hydrate client-side via useSession().
+export const revalidate = 3600;
+
+// Prerender the most recent published profiles at build time;
+// the rest generate on first visit, then cache.
+export async function generateStaticParams() {
+  const doctors = await prisma.doctor.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: { slug: true },
+  });
+  return doctors.map((d) => ({ slug: d.slug }));
+}
 
 /* =========================================================
    METADATA
@@ -144,8 +160,6 @@ export default async function DoctorPage({
 }: Props) {
   const { slug } = await params;
 
-  const session = await auth();
-
   const doctor = await prisma.doctor.findUnique({
     where: { slug },
 
@@ -230,11 +244,6 @@ export default async function DoctorPage({
           0
         ) / doctor.reviews.length
       : null;
-
-  const isOwnProfile =
-    session?.user &&
-    doctor.userId !== null &&
-    Number(session.user.id) === doctor.userId;
 
   const servicesList = doctor.services
     ? doctor.services
@@ -579,13 +588,12 @@ export default async function DoctorPage({
             CLAIM BANNER
         =================================================== */}
 
-        {!doctor.profileClaimed &&
-          !isOwnProfile && (
-            <DoctorClaimBanner
-              doctorId={doctor.id}
-              doctorName={doctor.fullName}
-            />
-          )}
+        <ClaimBannerGate
+          profileClaimed={doctor.profileClaimed}
+          doctorId={doctor.id}
+          doctorName={doctor.fullName}
+          doctorUserId={doctor.userId}
+        />
 
         {/* ===================================================
             HERO CARD
@@ -606,6 +614,8 @@ export default async function DoctorPage({
                   src={doctor.profilePhoto}
                   name={doctor.fullName}
                   size="xl"
+                  priority
+                  sizes="(max-width: 640px) 96px, 128px"
                   className="h-24 w-24 rounded-2xl object-cover shadow-md ring-4 ring-slate-100 dark:ring-slate-800 sm:h-32 sm:w-32"
                 />
 
@@ -774,21 +784,6 @@ export default async function DoctorPage({
                   consultationFee={
                     doctor.consultationFee
                   }
-                  userLoggedIn={Boolean(
-                    session?.user
-                  )}
-                  userName={
-                    session?.user?.name ||
-                    undefined
-                  }
-                  userEmail={
-                    session?.user?.email ||
-                    undefined
-                  }
-                  userPhone={
-                    (session?.user as any)
-                      ?.phone || undefined
-                  }
                   hospitalName={
                     doctor.hospitalName ||
                     undefined
@@ -851,14 +846,7 @@ export default async function DoctorPage({
                   }
                 />
 
-                {isOwnProfile && (
-                  <Link
-                    href="/dashboard"
-                    className="rounded-2xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    Edit Profile
-                  </Link>
-                )}
+                <OwnerEditLink doctorUserId={doctor.userId} />
               </div>
             </div>
           </div>
@@ -1319,10 +1307,7 @@ export default async function DoctorPage({
               <div className="pt-5">
                 <ReviewForm
                   doctorId={doctor.id}
-                  loggedIn={
-                    Boolean(session?.user) &&
-                    !isOwnProfile
-                  }
+                  doctorUserId={doctor.userId}
                 />
               </div>
             </section>

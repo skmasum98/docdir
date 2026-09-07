@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { Providers } from "./providers";
 import { Navigation } from "@/components/navigation";
 import { SiteFooter } from "@/components/site-footer";
@@ -93,20 +91,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-  const role = session?.user?.role;
-
+  // NOTE: intentionally no auth()/DB calls here — keeping the root layout
+  // free of dynamic data lets public pages prerender + ISR-cache for fast TTFB.
+  // Navigation reads the session client-side via useSession().
   // Google Analytics 4 — override via NEXT_PUBLIC_GA_ID env if needed
   const gaId = "G-GE2QF417LX";
-
-  let dbUserImage: string | null = null;
-  if (session?.user?.id) {
-    const u = await prisma.user.findUnique({
-      where: { id: Number(session.user.id) },
-      select: { image: true },
-    });
-    dbUserImage = u?.image ?? null;
-  }
 
   return (
     <html
@@ -116,7 +105,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <Providers>
-          <Navigation session={session} role={role} dbUserImage={dbUserImage} />
+          <Navigation />
           <div className="flex-1">{children}</div>
           <SiteFooter />
         </Providers>

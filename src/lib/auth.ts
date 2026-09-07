@@ -84,11 +84,20 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
         token.image = (user as any).image;
+      }
+
+      // Allow client-side `update()` (e.g. after a profile photo change)
+      // to refresh the avatar shown in the navigation without re-login.
+      if (
+        trigger === "update" &&
+        (session as any)?.user?.image !== undefined
+      ) {
+        token.image = (session as any).user.image;
       }
 
       return token;

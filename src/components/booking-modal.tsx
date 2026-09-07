@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Calendar,
   Clock,
@@ -29,7 +30,9 @@ interface BookingModalProps {
   doctorName: string;
   specialty: string | null;
   consultationFee: number | null;
-  userLoggedIn: boolean;
+  // Optional server-provided user snapshot. When omitted (e.g. on a
+  // statically-rendered page), values are read client-side via useSession().
+  userLoggedIn?: boolean;
   userName?: string;
   userEmail?: string;
   userPhone?: string;
@@ -101,6 +104,17 @@ export default function BookingModal({
   appointmentPhone,
 }: BookingModalProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+
+  // Prefer explicit props (dynamic pages), fall back to client session
+  // so this modal also works on statically-rendered pages.
+  const sessionName = session?.user?.name || "";
+  const sessionEmail = session?.user?.email || "";
+  const sessionPhone = (session?.user as any)?.phone || "";
+  const effectiveLoggedIn = userLoggedIn ?? Boolean(session?.user);
+  const defaultName = userName ?? sessionName;
+  const defaultPhone = userPhone ?? sessionPhone;
+  const defaultEmail = userEmail ?? sessionEmail;
 
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -120,10 +134,20 @@ export default function BookingModal({
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [selectedChamberFilter, setSelectedChamberFilter] = useState("all");
 
-  const [patientName, setPatientName] = useState(userName || "");
-  const [patientPhone, setPatientPhone] = useState(userPhone || "");
-  const [patientEmail, setPatientEmail] = useState(userEmail || "");
+  const [patientName, setPatientName] = useState(defaultName || "");
+  const [patientPhone, setPatientPhone] = useState(defaultPhone || "");
+  const [patientEmail, setPatientEmail] = useState(defaultEmail || "");
   const [chiefComplaint, setChiefComplaint] = useState("");
+
+  // Prefill from session once it arrives (static pages render logged-out
+  // on the server, then hydrate the session client-side).
+  useEffect(() => {
+    if (!isOpen || !session?.user) return;
+    if (!patientName && sessionName) setPatientName(sessionName);
+    if (!patientPhone && sessionPhone) setPatientPhone(sessionPhone);
+    if (!patientEmail && sessionEmail) setPatientEmail(sessionEmail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, session]);
 
   const [loadingDates, setLoadingDates] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -214,9 +238,9 @@ export default function BookingModal({
     setSelectedChamberFilter("all");
     setAvailableSlots([]);
 
-    setPatientName(userName || "");
-    setPatientPhone(userPhone || "");
-    setPatientEmail(userEmail || "");
+    setPatientName(defaultName || "");
+    setPatientPhone(defaultPhone || "");
+    setPatientEmail(defaultEmail || "");
     setChiefComplaint("");
 
     setMessage(null);
@@ -226,7 +250,7 @@ export default function BookingModal({
   // Open
   // -----------------------------
   function handleOpen() {
-    if (!userLoggedIn) {
+    if (!effectiveLoggedIn) {
       router.push(
         `/login?callbackUrl=${encodeURIComponent(window.location.pathname)}`
       );

@@ -20,6 +20,10 @@ import {
   Network,
 } from "lucide-react";
 
+// Prerender the homepage + refresh hourly (edits revalidate on demand via
+// revalidatePath in admin/image actions). Big TTFB win vs per-request DB reads.
+export const revalidate = 3600;
+
 export default async function HomePage() {
   const [
     divisions,

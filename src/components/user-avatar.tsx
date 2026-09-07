@@ -10,6 +10,9 @@ interface UserAvatarProps {
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   fallbackSrc?: string | null;
+  // Set on above-the-fold / LCP avatars so Next.js preloads them.
+  priority?: boolean;
+  sizes?: string;
 }
 
 export function UserAvatar({
@@ -18,6 +21,8 @@ export function UserAvatar({
   size = "md",
   className = "",
   fallbackSrc = "/Dotor-Avatar.webp",
+  priority = false,
+  sizes,
 }: UserAvatarProps) {
   const sizeClasses = {
     sm: "w-8 h-8 text-xs",
@@ -69,6 +74,8 @@ export function UserAvatar({
           alt={name || "User Avatar"}
           width={pixelDimensions[size]}
           height={pixelDimensions[size]}
+          sizes={sizes ?? `${pixelDimensions[size]}px`}
+          priority={priority}
           className="h-full w-full object-cover"
           referrerPolicy="no-referrer"
           unoptimized={false}

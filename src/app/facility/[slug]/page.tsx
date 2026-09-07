@@ -32,6 +32,12 @@ import { FacilityLogo } from "@/components/facility-logo";
 
 type Props = { params: Promise<{ slug: string }> };
 
+// On-demand ISR (refresh hourly, edits revalidate on demand).
+// Facility pages are NOT bulk-prerendered: ~1300 heavy pages in parallel
+// exhausts the DB connection pool at build time and breaks sitemap gen.
+// First visit renders on demand, then serves from cache.
+export const revalidate = 3600;
+
 const TYPE_CONFIG: Record<
   string,
   { label: string; bg: string; text: string; border: string; icon: any; schemaType: string }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { createReviewAction } from "@/lib/actions/doctor";
 import { initialFormState, fieldError } from "@/lib/form";
@@ -8,13 +9,40 @@ import { initialFormState, fieldError } from "@/lib/form";
 export default function ReviewForm({
   doctorId,
   loggedIn,
+  doctorUserId,
 }: {
   doctorId: number;
-  loggedIn: boolean;
+  // Optional server snapshot. When omitted, login/owner state is derived
+  // client-side via useSession() so the page can stay statically rendered.
+  loggedIn?: boolean;
+  doctorUserId?: number | null;
 }) {
   const [state, formAction, pending] = useActionState(createReviewAction, initialFormState);
+  const { data: session, status } = useSession();
 
-  if (!loggedIn) {
+  const isOwner =
+    doctorUserId !== undefined &&
+    doctorUserId !== null &&
+    session?.user &&
+    Number(session.user.id) === doctorUserId;
+
+  const effectiveLoggedIn =
+    loggedIn ?? (status === "authenticated" ? !isOwner : false);
+
+  if (status === "loading" && loggedIn === undefined) {
+    return (
+      <div
+        aria-hidden
+        className="animate-pulse space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+      >
+        <div className="h-5 w-32 rounded-lg bg-slate-200" />
+        <div className="h-24 rounded-2xl bg-slate-100" />
+        <div className="h-9 w-28 rounded-2xl bg-slate-200" />
+      </div>
+    );
+  }
+
+  if (!effectiveLoggedIn) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700">
         <Link
