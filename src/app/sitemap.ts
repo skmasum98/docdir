@@ -130,9 +130,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const specialtyPages: MetadataRoute.Sitemap =
       specialties.map((specialty) => ({
-        url: `${siteUrl}/search?specialty=${encodeURIComponent(
-          specialty.slug
-        )}`,
+        url: `${siteUrl}/specialty/${specialty.slug}`,
         lastModified: now,
         changeFrequency: "weekly",
         priority: 0.7,

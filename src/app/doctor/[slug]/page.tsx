@@ -561,7 +561,7 @@ export default async function DoctorPage({
                 <ChevronRight className="h-3 w-3 shrink-0 text-slate-400" />
 
                 <Link
-                  href={`/search?specialty=${doctor.specialty.slug}`}
+                  href={`/specialty/${doctor.specialty.slug}`}
                   className="max-w-[140px] shrink-0 truncate transition hover:text-slate-900 dark:hover:text-white sm:max-w-none"
                 >
                   {doctor.specialty.name}
@@ -1512,13 +1512,7 @@ export default async function DoctorPage({
                 </p>
 
                 <Link
-                  href={`/search?specialty=${doctor.specialty.slug}${
-                    doctor.city
-                      ? `&q=${encodeURIComponent(
-                          doctor.city
-                        )}`
-                      : ""
-                  }`}
+                  href={`/specialty/${doctor.specialty.slug}`}
                   className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700"
                 >
                   <span className="truncate">

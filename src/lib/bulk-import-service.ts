@@ -39,6 +39,9 @@ export type BulkImportResult = {
   failed: number;
   errors: Array<{ rowNumber: number; doctorName?: string; error: string }>;
   timeTakenMs: number;
+  // Specialty slugs touched by inserted/updated rows — used to revalidate
+  // the matching /specialty/[slug] landing pages after import.
+  affectedSpecialtySlugs: string[];
 };
 
 // Clean and normalize strings for matching
@@ -73,6 +76,7 @@ export class BulkImportService {
     let skipped = 0;
     let failed = 0;
     const errors: Array<{ rowNumber: number; doctorName?: string; error: string }> = [];
+    const affectedSpecs = new Set<string>();
 
     if (!rows || rows.length === 0) {
       return {
@@ -83,6 +87,7 @@ export class BulkImportService {
         failed: 0,
         errors: [],
         timeTakenMs: 0,
+        affectedSpecialtySlugs: [],
       };
     }
 
@@ -252,6 +257,7 @@ export class BulkImportService {
         try {
           // A. Resolve or Create Specialty
           let specialtyId: number | null = null;
+          let rowSpecSlug: string | null = null;
           const rawSpecialty = row.specialty?.trim();
           if (rawSpecialty) {
             const specKey = norm(rawSpecialty);
@@ -271,6 +277,7 @@ export class BulkImportService {
 
             if (matchedSpec) {
               specialtyId = matchedSpec.id;
+              rowSpecSlug = matchedSpec.slug;
             }
           }
 
@@ -457,6 +464,7 @@ export class BulkImportService {
                 }
               }
               updated++;
+              if (rowSpecSlug) affectedSpecs.add(rowSpecSlug);
             }
           } else {
             // Create New Doctor with unique deterministic slug.
@@ -514,6 +522,7 @@ export class BulkImportService {
             }
 
             inserted++;
+            if (rowSpecSlug) affectedSpecs.add(rowSpecSlug);
           }
         } catch (rowErr: any) {
           failed++;
@@ -539,6 +548,7 @@ export class BulkImportService {
           },
         ],
         timeTakenMs: Date.now() - startTime,
+        affectedSpecialtySlugs: Array.from(affectedSpecs),
       };
     }
 
@@ -550,6 +560,7 @@ export class BulkImportService {
       failed,
       errors,
       timeTakenMs: Date.now() - startTime,
+      affectedSpecialtySlugs: Array.from(affectedSpecs),
     };
   }
 }

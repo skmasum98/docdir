@@ -50,6 +50,7 @@ export async function createSpecialtyAction(
   await prisma.specialty.create({ data: { name: parsed.data.name, slug } });
   revalidatePath("/admin/specialties");
   revalidatePath("/search");
+  revalidatePath(`/specialty/${slug}`);
   redirect("/admin/specialties?saved=1");
 }
 
@@ -57,9 +58,14 @@ export async function deleteSpecialtyAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return;
+  const existing = await prisma.specialty.findUnique({
+    where: { id },
+    select: { slug: true },
+  });
   await prisma.specialty.deleteMany({ where: { id } });
   revalidatePath("/admin/specialties");
   revalidatePath("/search");
+  if (existing) revalidatePath(`/specialty/${existing.slug}`);
 }
 
 export async function createDivisionAction(
@@ -369,6 +375,13 @@ export async function createDoctorAction(
   });
   revalidatePath("/admin/doctors");
   revalidatePath("/search");
+  if (data.specialtyId) {
+    const spec = await prisma.specialty.findUnique({
+      where: { id: data.specialtyId },
+      select: { slug: true },
+    });
+    if (spec) revalidatePath(`/specialty/${spec.slug}`);
+  }
   redirect("/admin/doctors?saved=1");
 }
 
@@ -412,7 +425,13 @@ export async function updateDoctorAction(
     return { ok: false, message: "Please fix the errors below.", fieldErrors: fieldErrorsFromZod(parsed.error) };
 
   const data = parsed.data;
-  const existing = await prisma.doctor.findUnique({ where: { id }, include: { doctorFacilities: true } });
+  const existing = await prisma.doctor.findUnique({
+    where: { id },
+    include: {
+      doctorFacilities: true,
+      specialty: { select: { slug: true } },
+    },
+  });
   if (!existing) return { ok: false, message: "Doctor not found." };
 
   await prisma.$transaction(async (tx: any) => {
@@ -466,6 +485,16 @@ export async function updateDoctorAction(
   revalidatePath(`/admin/doctors/${id}`);
   revalidatePath("/search");
   revalidatePath(`/doctor/${existing.slug}`);
+  if (existing.specialty) revalidatePath(`/specialty/${existing.specialty.slug}`);
+  const finalSpecialtyId =
+    data.specialtyId === undefined ? existing.specialtyId : data.specialtyId;
+  if (finalSpecialtyId && finalSpecialtyId !== existing.specialtyId) {
+    const newSpec = await prisma.specialty.findUnique({
+      where: { id: finalSpecialtyId },
+      select: { slug: true },
+    });
+    if (newSpec) revalidatePath(`/specialty/${newSpec.slug}`);
+  }
   redirect(`/admin/doctors/${id}?saved=1`);
 }
 
@@ -473,11 +502,15 @@ export async function deleteDoctorAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return;
-  const doc = await prisma.doctor.findUnique({ where: { id } });
+  const doc = await prisma.doctor.findUnique({
+    where: { id },
+    select: { slug: true, specialty: { select: { slug: true } } },
+  });
   await prisma.doctor.deleteMany({ where: { id } });
   revalidatePath("/admin/doctors");
   revalidatePath("/search");
   if (doc) revalidatePath(`/doctor/${doc.slug}`);
+  if (doc?.specialty) revalidatePath(`/specialty/${doc.specialty.slug}`);
 }
 
 export async function createBlogAction(

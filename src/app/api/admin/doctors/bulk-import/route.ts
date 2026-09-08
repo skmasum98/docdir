@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { BulkImportService, type BulkDoctorRow, type BulkImportOptions } from "@/lib/bulk-import-service";
 
@@ -30,6 +31,16 @@ export async function POST(req: NextRequest) {
 
     // Process chunk
     const result = await BulkImportService.importBatch(rows, options, startRowIndex);
+
+    // Refresh cached pages touched by this chunk so new/updated doctors
+    // appear immediately (instead of waiting for hourly ISR).
+    if (result.inserted + result.updated > 0) {
+      revalidatePath("/");
+      revalidatePath("/search");
+      for (const slug of result.affectedSpecialtySlugs.slice(0, 50)) {
+        revalidatePath(`/specialty/${slug}`);
+      }
+    }
 
     return NextResponse.json({
       success: true,
