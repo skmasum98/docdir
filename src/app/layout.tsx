@@ -124,6 +124,7 @@ export default async function RootLayout({
                 gtag('config', '${gaId}');
               `}
             </Script>
+            <script src="https://analytics.ahrefs.com/analytics.js" data-key="rNuEnHqhPPeRKxrN11RA5A" async></script>
           </>
         ) : null}
       </body>
