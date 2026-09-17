@@ -179,6 +179,7 @@ export async function createFacilityAction(
     website: formData.get("website") || undefined,
     emergencyContact: formData.get("emergencyContact") || undefined,
     upazilaId: formData.get("upazilaId"),
+    description: formData.get("description") || undefined,
   });
   if (!parsed.success)
     return { ok: false, message: "Invalid input.", fieldErrors: fieldErrorsFromZod(parsed.error) };
@@ -192,6 +193,7 @@ export async function createFacilityAction(
       type: parsed.data.type,
       logo: parsed.data.logo || null,
       address: parsed.data.address || null,
+      description: parsed.data.description || null,
       phone: parsed.data.phone || null,
       hotline: parsed.data.hotline || null,
       email: parsed.data.email || null,
@@ -226,6 +228,7 @@ export async function updateFacilityAction(
     website: formData.get("website") || undefined,
     emergencyContact: formData.get("emergencyContact") || undefined,
     upazilaId: formData.get("upazilaId") ? Number(formData.get("upazilaId")) : undefined,
+    description: formData.get("description") !== null ? (formData.get("description") as string) : undefined,
   });
 
   if (!parsed.success) {
@@ -250,6 +253,7 @@ export async function updateFacilityAction(
       website: parsed.data.website === undefined ? existing.website : parsed.data.website || null,
       emergencyContact: parsed.data.emergencyContact === undefined ? existing.emergencyContact : parsed.data.emergencyContact || null,
       upazilaId: parsed.data.upazilaId ?? existing.upazilaId,
+      description: parsed.data.description === undefined ? existing.description : parsed.data.description || null,
     },
   });
 

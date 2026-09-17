@@ -206,6 +206,7 @@ export const facilitySchema = z.object({
   website: z.string().trim().max(300).optional().or(z.literal("")),
   emergencyContact: phoneSchema,
   upazilaId: z.coerce.number().int().positive(),
+  description: z.string().trim().max(5000).optional().or(z.literal("")),
 });
 
 export const facilityUpdateSchema = facilitySchema.partial();
@@ -220,6 +221,7 @@ export const facilitySelfUpdateSchema = z.object({
   website: z.string().trim().max(300).optional().or(z.literal("")),
   emergencyContact: phoneSchema,
   address: z.string().trim().max(500).optional().or(z.literal("")),
+  description: z.string().trim().max(5000).optional().or(z.literal("")),
 });
 
 export const facilityTestSchema = z.object({

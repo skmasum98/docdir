@@ -37,6 +37,7 @@ export type FacilityData = {
   type: string;
   logo?: string | null;
   address: string | null;
+  description: string | null;
   phone: string | null;
   upazilaId: number;
   upazilaName: string;
@@ -352,6 +353,19 @@ export default function FacilitiesManager({
               />
             </div>
 
+            <div className="md:col-span-2">
+              <label className={labelCls}>About / Description (shown on public page)</label>
+              <textarea
+                name="description"
+                rows={4}
+                placeholder="e.g. A 150-bed multispecialty hospital with 24/7 emergency, ICU, dialysis and digital diagnostics since 2005..."
+                className={inputCls}
+              />
+              {fieldError(createState, "description") && (
+                <p className="mt-1 text-xs text-rose-700">{fieldError(createState, "description")}</p>
+              )}
+            </div>
+
             <div className="md:col-span-2 border-t border-slate-200/80 pt-3">
               <FacilityLogoUploader
                 facilityName="New Facility"
@@ -479,6 +493,20 @@ export default function FacilitiesManager({
                   placeholder="e.g. House #16, Road #2, Dhanmondi, Dhaka-1205"
                   className={inputCls}
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className={labelCls}>About / Description (shown on public page)</label>
+                <textarea
+                  name="description"
+                  rows={4}
+                  defaultValue={editingFacility.description ?? ""}
+                  placeholder="e.g. A 150-bed multispecialty hospital with 24/7 emergency, ICU, dialysis and digital diagnostics since 2005..."
+                  className={inputCls}
+                />
+                {fieldError(updateState, "description") && (
+                  <p className="mt-1 text-xs text-rose-700">{fieldError(updateState, "description")}</p>
+                )}
               </div>
 
               <div className="md:col-span-2 border-t border-slate-200/80 pt-3">

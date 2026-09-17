@@ -50,6 +50,7 @@ type FacilityData = {
   website: string | null;
   emergencyContact: string | null;
   address: string | null;
+  description: string | null;
   isVerified: boolean;
   profileClaimed: boolean;
   upazila: {
@@ -475,6 +476,22 @@ export default function FacilityManagerView({
                 placeholder="e.g. House-16, Road-2, Dhanmondi, Dhaka-1205"
                 className="w-full rounded-2xl border border-slate-300 p-3 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
               />
+            </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                About Your Institute (shown on public page)
+              </label>
+              <textarea
+                name="description"
+                rows={5}
+                defaultValue={currentFacility.description || ""}
+                placeholder="e.g. A 150-bed multispecialty hospital with 24/7 emergency, ICU, dialysis, digital X-ray & pathology since 2005. Mention key departments, facilities and visiting information."
+                className="w-full rounded-2xl border border-slate-300 p-3 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+              />
+              <p className="text-[11px] text-slate-500">
+                This appears in the About section of your public profile and helps patients (and Google) understand your services.
+              </p>
             </div>
           </div>
 

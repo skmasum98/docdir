@@ -28,6 +28,7 @@ export default async function AdminFacilitiesPage({ searchParams }: Props) {
     type: f.type,
     logo: f.logo,
     address: f.address,
+    description: f.description,
     phone: f.phone,
     upazilaId: f.upazilaId,
     upazilaName: f.upazila?.name || "Unknown Upazila",

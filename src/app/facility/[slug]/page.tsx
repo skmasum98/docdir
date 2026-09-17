@@ -105,7 +105,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const pageUrl = `${siteUrl}/facility/${facility.slug}`;
   
   const testNames = facility.tests.map(t => t.name).join(", ");
-  const description = `Diagnostic test pricing list, doctor schedule, emergency numbers, and contact details for ${facility.name} in ${location}. ${facility.tests.length > 0 ? `Tests available: ${testNames}.` : ""} Hotline: ${facility.hotline || facility.phone || "N/A"}.`;
+  const description = facility.description?.trim()
+    ? `${facility.description.trim().slice(0, 120)} ${facility.name} in ${location}. Hotline: ${facility.hotline || facility.phone || "N/A"}.`
+    : `Diagnostic test pricing list, doctor schedule, emergency numbers, and contact details for ${facility.name} in ${location}. ${facility.tests.length > 0 ? `Tests available: ${testNames}.` : ""} Hotline: ${facility.hotline || facility.phone || "N/A"}.`;
   
   return {
     title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
@@ -193,7 +195,7 @@ export default async function FacilityPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": [typeConfig.schemaType, "MedicalBusiness"],
     name: facility.name,
-    description: `${typeConfig.label} located in ${locationText}.`,
+    description: facility.description?.trim() || `${typeConfig.label} located in ${locationText}.`,
     url: pageUrl,
     image: facility.logo || undefined,
     telephone: facility.phone || facility.hotline || undefined,
@@ -379,6 +381,18 @@ export default async function FacilityPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* About This Facility */}
+      {facility.description?.trim() && (
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-8">
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+            About {facility.name}
+          </h2>
+          <p className="mt-2 whitespace-pre-line break-words text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+            {facility.description.trim()}
+          </p>
+        </div>
+      )}
 
       {/* Key Clinical Facilities & Services (Only shown when configured by admin or facility admin) */}
       {(() => {

@@ -136,6 +136,7 @@ export async function updateFacilityProfileSelfAction(
     website: formData.get("website") || undefined,
     emergencyContact: formData.get("emergencyContact") || undefined,
     address: formData.get("address") || undefined,
+    description: formData.get("description") !== null ? (formData.get("description") as string) : undefined,
   });
 
   if (!parsed.success) {
@@ -157,6 +158,7 @@ export async function updateFacilityProfileSelfAction(
       website: parsed.data.website || null,
       emergencyContact: parsed.data.emergencyContact || null,
       address: parsed.data.address || null,
+      description: parsed.data.description || null,
     },
   });
 
