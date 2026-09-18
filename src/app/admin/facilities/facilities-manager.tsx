@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import {
@@ -113,6 +113,11 @@ export default function FacilitiesManager({
   const [bulkMessage, setBulkMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [isBulkDeleting, startBulkDelete] = useTransition();
 
+  // Table pagination (10 default, adjustable up to 500)
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 500];
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Actions
   const [createState, createAction, createPending] = useActionState(createFacilityAction, initialFormState);
   const [updateState, updateAction, updatePending] = useActionState(updateFacilityAction, initialFormState);
@@ -158,6 +163,18 @@ export default function FacilitiesManager({
     () => filteredFacilities.map((f) => f.id),
     [filteredFacilities]
   );
+
+  /* Reset to first page whenever table filters/page-size change */
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, typeFilter, districtFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFacilities.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedFacilities = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredFacilities.slice(start, start + pageSize);
+  }, [filteredFacilities, safePage, pageSize]);
   const filteredSelectedCount = useMemo(
     () => filteredIds.filter((id) => selectedIds.has(id)).length,
     [filteredIds, selectedIds]
@@ -676,9 +693,17 @@ export default function FacilitiesManager({
 
       {/* Facilities Table */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+        <div className="border-b border-slate-100 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Showing {filteredFacilities.length} of {facilities.length} Facilities
+            Showing{" "}
+            {filteredFacilities.length > 0
+              ? `${(safePage - 1) * pageSize + 1}–${Math.min(
+                  safePage * pageSize,
+                  filteredFacilities.length
+                )}`
+              : "0"}{" "}
+            of {filteredFacilities.length} Facilities
+            {totalPages > 1 && ` • Page ${safePage} of ${totalPages}`}
           </div>
           {(searchTerm || typeFilter !== "ALL" || districtFilter !== "ALL") && (
             <button
@@ -713,8 +738,8 @@ export default function FacilitiesManager({
                     }}
                     onChange={toggleAllFiltered}
                     disabled={filteredIds.length === 0}
-                    aria-label="Select all facilities in view"
-                    title="Select all in view"
+                    aria-label="Select all matching facilities (all pages)"
+                    title="Select all matching (all pages)"
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:opacity-40"
                   />
                 </th>
@@ -727,7 +752,7 @@ export default function FacilitiesManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredFacilities.map((facility) => (
+              {paginatedFacilities.map((facility) => (
                 <tr key={facility.id} className="hover:bg-slate-50/70 transition">
                   <td className="px-4 py-4">
                     <input
@@ -875,6 +900,46 @@ export default function FacilitiesManager({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Table footer: pagination + per-page selector */}
+        <div className="flex min-h-12 flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between gap-2 sm:justify-start">
+            <button
+              type="button"
+              disabled={safePage === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
+            >
+              ← Prev
+            </button>
+            <span className="px-1 text-xs font-medium text-slate-600">
+              Page {safePage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={safePage === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
+            >
+              Next →
+            </button>
+          </div>
+          <label className="flex items-center justify-between gap-2 text-xs font-medium text-slate-600 sm:justify-end">
+            <span>Per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              aria-label="Facilities per page"
+              className="min-h-10 cursor-pointer rounded-xl border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 focus:border-indigo-500 focus:outline-none"
+            >
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
     </div>

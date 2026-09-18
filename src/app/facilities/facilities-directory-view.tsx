@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -144,6 +144,11 @@ export function FacilitiesDirectoryView({
   const [sortBy, setSortBy] = useState<SortOption>("doctors");
   const [testSearchQuery, setTestSearchQuery] = useState("");
 
+  /* Directory pagination (10 default, adjustable up to 500) */
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 500];
+  const [dirPage, setDirPage] = useState(1);
+  const [dirPageSize, setDirPageSize] = useState(10);
+
   /* -------------------------------------------------------------------------- */
   /* Location options                                                            */
   /* -------------------------------------------------------------------------- */
@@ -257,6 +262,27 @@ export function FacilitiesDirectoryView({
   ]);
 
   /* -------------------------------------------------------------------------- */
+  /* Directory pagination                                                        */
+  /* -------------------------------------------------------------------------- */
+
+  const totalDirPages = Math.max(
+    1,
+    Math.ceil(filteredFacilities.length / dirPageSize)
+  );
+  const safeDirPage = Math.min(dirPage, totalDirPages);
+  const paginatedFacilities = useMemo(() => {
+    const start = (safeDirPage - 1) * dirPageSize;
+    return filteredFacilities.slice(start, start + dirPageSize);
+  }, [filteredFacilities, safeDirPage, dirPageSize]);
+
+  const goToDirPage = (next: number) => {
+    setDirPage(Math.min(totalDirPages, Math.max(1, next)));
+    document
+      .getElementById("facility-results")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  /* -------------------------------------------------------------------------- */
   /* Test price comparison                                                       */
   /* -------------------------------------------------------------------------- */
 
@@ -343,6 +369,19 @@ export function FacilitiesDirectoryView({
     setSelectedDistrict(value);
     setSelectedUpazila("ALL");
   };
+
+  /* Reset to first page whenever directory filters/sort/page-size change */
+  useEffect(() => {
+    setDirPage(1);
+  }, [
+    selectedType,
+    searchQuery,
+    selectedDivision,
+    selectedDistrict,
+    selectedUpazila,
+    sortBy,
+    dirPageSize,
+  ]);
 
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
@@ -627,14 +666,24 @@ export function FacilitiesDirectoryView({
           </section>
 
           {/* Facility results */}
-          <section className="min-w-0 space-y-4">
-            <div className="flex min-w-0 items-center justify-between gap-3">
+          <section id="facility-results" className="min-w-0 scroll-mt-20 space-y-4">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
               <h2 className="min-w-0 text-base font-bold text-slate-900 sm:text-lg">
                 Verified Medical Institutes & Labs{" "}
                 <span className="text-slate-400">
                   ({filteredFacilities.length})
                 </span>
               </h2>
+              <p className="shrink-0 text-xs font-medium text-slate-500">
+                Showing{" "}
+                {filteredFacilities.length > 0
+                  ? `${(safeDirPage - 1) * dirPageSize + 1}–${Math.min(
+                      safeDirPage * dirPageSize,
+                      filteredFacilities.length
+                    )}`
+                  : "0"}{" "}
+                of {filteredFacilities.length}
+              </p>
             </div>
 
             {filteredFacilities.length === 0 ? (
@@ -664,7 +713,7 @@ export function FacilitiesDirectoryView({
               </div>
             ) : (
               <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-                {filteredFacilities.map((facility) => {
+                {paginatedFacilities.map((facility) => {
                   const isHospital = facility.type === "HOSPITAL";
                   const isDiagnostic = facility.type === "DIAGNOSTIC";
 
@@ -843,6 +892,51 @@ export function FacilitiesDirectoryView({
                   );
                 })}
               </div>
+            )}
+
+            {/* Directory pagination */}
+            {filteredFacilities.length > 0 && (
+              <nav
+                aria-label="Facilities directory pagination"
+                className="flex min-h-12 flex-col gap-2 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center justify-between gap-2 sm:justify-start">
+                  <button
+                    type="button"
+                    disabled={safeDirPage === 1}
+                    onClick={() => goToDirPage(safeDirPage - 1)}
+                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    ← Prev
+                  </button>
+                  <span className="px-1 text-xs font-medium text-slate-600">
+                    Page {safeDirPage} of {totalDirPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={safeDirPage === totalDirPages}
+                    onClick={() => goToDirPage(safeDirPage + 1)}
+                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+                <label className="flex items-center justify-between gap-2 text-xs font-medium text-slate-600 sm:justify-end">
+                  <span>Per page:</span>
+                  <select
+                    value={dirPageSize}
+                    onChange={(e) => setDirPageSize(Number(e.target.value))}
+                    aria-label="Facilities per page"
+                    className="min-h-10 cursor-pointer rounded-xl border border-slate-300 bg-white px-2.5 text-xs font-semibold text-slate-700 focus:border-indigo-500 focus:outline-none"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </nav>
             )}
           </section>
         </>
