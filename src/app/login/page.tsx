@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Login | Doctor Directory Bangladesh",
+  title: "Login",
   description: "Log in to your Doctor Directory account to manage your profile, reviews, and doctor listings.",
   robots: { index: false, follow: true },
 };

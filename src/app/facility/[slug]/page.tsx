@@ -29,6 +29,7 @@ import {
 import { FacilityTestCatalog } from "@/components/facility-test-catalog";
 import { FacilityCategorizedDoctors } from "@/components/facility-categorized-doctors";
 import { FacilityLogo } from "@/components/facility-logo";
+import { SITE_URL } from "@/lib/site-url";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -94,14 +95,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
   });
   if (!facility) {
-    return { title: "Facility Not Found | Doctor Directory" };
+    return { title: "Facility Not Found" };
   }
   const typeName = TYPE_CONFIG[facility.type]?.label || facility.type;
   const location = [facility.upazila?.name, facility.upazila?.district?.name]
     .filter(Boolean)
     .join(", ");
   
-  const siteUrl = process.env.NEXTAUTH_URL || "https://doctordirectory.com";
+  const siteUrl = SITE_URL;
   const pageUrl = `${siteUrl}/facility/${facility.slug}`;
   
   const testNames = facility.tests.map(t => t.name).join(", ");
@@ -110,7 +111,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `Diagnostic test pricing list, doctor schedule, emergency numbers, and contact details for ${facility.name} in ${location}. ${facility.tests.length > 0 ? `Tests available: ${testNames}.` : ""} Hotline: ${facility.hotline || facility.phone || "N/A"}.`;
   
   return {
-    title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
+    title: `${facility.name} - ${typeName} in ${location}`,
     description: description.slice(0, 160),
     keywords: [
       facility.name,
@@ -125,7 +126,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: pageUrl,
     },
     openGraph: {
-      title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
+      title: `${facility.name} - ${typeName} in ${location}`,
       description: description.slice(0, 160),
       url: pageUrl,
       siteName: "Doctor Directory",
@@ -141,7 +142,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${facility.name} - ${typeName} in ${location} | Doctor Directory`,
+      title: `${facility.name} - ${typeName} in ${location}`,
       description: description.slice(0, 160),
       images: facility.logo ? [facility.logo] : [],
     },
@@ -187,7 +188,7 @@ export default async function FacilityPage({ params }: Props) {
     .filter(Boolean)
     .join(", ");
 
-  const siteUrl = process.env.NEXTAUTH_URL || "https://doctordirectory.com";
+  const siteUrl = SITE_URL;
   const pageUrl = `${siteUrl}/facility/${facility.slug}`;
 
   // Schema.org structured data for the facility

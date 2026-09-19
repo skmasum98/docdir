@@ -8,6 +8,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { DoctorShareButton } from "@/components/doctor-share-button";
 import { FacilityLogo } from "@/components/facility-logo";
 import BookingModal from "@/components/booking-modal";
+import { SITE_URL } from "@/lib/site-url";
 
 import {
   Stethoscope,
@@ -66,7 +67,7 @@ export async function generateMetadata({
 
   if (!doctor || doctor.status === "BLOCKED") {
     return {
-      title: "Doctor Not Found | Doctor Directory",
+      title: "Doctor Not Found",
     };
   }
 
@@ -91,9 +92,7 @@ export async function generateMetadata({
     doctor.consultationFee || "N/A"
   }. BMDC Reg: ${doctor.bmdcNumber || "Verified"}.`;
 
-  const siteUrl =
-    process.env.NEXTAUTH_URL ||
-    "https://drchamber.info";
+  const siteUrl = SITE_URL;
 
   const pageUrl =
     `${siteUrl}/doctor/${doctor.slug}`;
@@ -338,9 +337,7 @@ export default async function DoctorPage({
      JSON-LD
   ========================================================= */
 
-  const siteUrl =
-    process.env.NEXTAUTH_URL ||
-    "https://drchamber.info";
+  const siteUrl = SITE_URL;
 
   const physicianSchema = {
     "@context": "https://schema.org",

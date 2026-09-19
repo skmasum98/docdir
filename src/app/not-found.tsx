@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Home, Search, Building2, Phone } from "lucide-react";
 
 export const metadata = {
-  title: "404 - Page Not Found | Doctor Directory",
+  title: "404 - Page Not Found",
   description: "The page you are looking for could not be found. Browse verified doctors, hospitals, and diagnostic centers in Bangladesh.",
   robots: { index: false, follow: true },
 };

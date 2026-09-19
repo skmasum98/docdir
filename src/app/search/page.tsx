@@ -15,9 +15,14 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Search Doctors | Doctor Directory Bangladesh",
+  title: "Search Doctors",
   description:
     "Find verified specialist doctors in Bangladesh. Search by name, specialty, location, hospital, gender, and consultation fee. View chamber addresses, visiting hours, and book appointments.",
+  alternates: {
+    // Consolidate all filter variants (?specialty=, ?division=, …) to the
+    // bare search URL so crawlers don't treat each as a separate canonical.
+    canonical: "/search",
+  },
 };
 
 type Props = {

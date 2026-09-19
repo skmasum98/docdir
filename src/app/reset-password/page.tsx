@@ -5,7 +5,7 @@ import ResetPasswordForm from "./reset-password-form";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Set New Password | Doctor Directory Bangladesh",
+  title: "Set New Password",
   description: "Enter your verification code and choose a new secure password.",
   robots: { index: false, follow: true },
 };

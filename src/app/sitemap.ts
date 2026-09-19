@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
+import { SITE_URL } from "@/lib/site-url";
 
-const siteUrl = "https://drchamber.info";
+const siteUrl = SITE_URL;
 
 export const revalidate = 3600;
 

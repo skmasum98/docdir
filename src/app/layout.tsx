@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { Navigation } from "@/components/navigation";
 import { SiteFooter } from "@/components/site-footer";
+import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
     "medical directory",
     "healthcare Bangladesh",
   ],
-  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://drchamber.info"),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
   },

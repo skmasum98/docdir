@@ -4,7 +4,7 @@ import ForgotPasswordForm from "./forgot-password-form";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Recover Password | Doctor Directory Bangladesh",
+  title: "Recover Password",
   description: "Reset your Doctor Directory account password via Email or WhatsApp OTP verification.",
   robots: { index: false, follow: true },
 };

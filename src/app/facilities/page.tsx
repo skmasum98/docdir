@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { FacilitiesDirectoryView, type FacilityListItem, type DivisionOption } from "./facilities-directory-view";
 
 export const metadata: Metadata = {
-  title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
+  title: "Hospitals & Diagnostic Centers Directory",
   description:
     "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh. Compare diagnostic test pricing, find practicing doctors, and 24/7 hotline numbers.",
   openGraph: {
-    title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
+    title: "Hospitals & Diagnostic Centers Directory",
     description:
       "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh. Compare diagnostic test pricing, find practicing doctors, and 24/7 hotline numbers.",
     type: "website",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hospitals & Diagnostic Centers Directory | Doctor Directory Bangladesh",
+    title: "Hospitals & Diagnostic Centers Directory",
     description:
       "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh.",
   },

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma, Prisma } from "@/lib/prisma";
 import { DoctorStatus } from "@/lib/enums";
 import { UserAvatar } from "@/components/user-avatar";
+import { SITE_URL } from "@/lib/site-url";
 import {
   Search,
   MapPin,
@@ -53,12 +54,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     select: { name: true, slug: true },
   });
   if (!specialty) {
-    return { title: "Specialty Not Found | Doctor Directory" };
+    return { title: "Specialty Not Found" };
   }
 
-  const siteUrl = process.env.NEXTAUTH_URL || "https://drchamber.info";
+  const siteUrl = SITE_URL;
   const pageUrl = `${siteUrl}/specialty/${specialty.slug}`;
-  const title = `${specialty.name} Doctors in Bangladesh | Doctor Directory`;
+  const title = `${specialty.name} Doctors in Bangladesh`;
   const description =
     `Find verified ${specialty.name} specialists across Bangladesh. Compare consultation fees, chamber addresses, visiting hours and book serials online.`.slice(
       0,
@@ -182,7 +183,7 @@ export default async function SpecialtyPage({ params, searchParams }: Props) {
   }
 
   const hasActiveFilters = Boolean(q || divisionSlug);
-  const siteUrl = process.env.NEXTAUTH_URL || "https://drchamber.info";
+  const siteUrl = SITE_URL;
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
