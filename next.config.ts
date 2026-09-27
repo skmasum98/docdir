@@ -33,6 +33,22 @@ const nextConfig: NextConfig = {
     ],
     formats: ["image/avif", "image/webp"],
   },
+
+  // --- নতুন যোগ করা রিডাইরেক্ট অংশ ---
+  async redirects() {
+    return [
+      {
+        // এটি '/doctor/dr-dr-' দিয়ে শুরু হওয়া সব লিঙ্ক ধরবে
+        source: '/doctor/dr-dr-:slug',
+        // এটি অটোমেটিক 'dr-' দিয়ে নতুন লিঙ্ক তৈরি করবে
+        destination: '/doctor/dr-:slug',
+        // permanent: true মানে হলো এটি একটি 301 Redirect, যা SEO এর জন্য সবচেয়ে জরুরি
+        permanent: true,
+      },
+    ];
+  },
+  // --------------------------------
+
   async headers() {
     return [
       {
