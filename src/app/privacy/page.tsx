@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "Privacy Policy for Doctor Directory Bangladesh — what data we collect, how we use it, appointments, cookies, and your rights.",
+  alternates: {
+    canonical: `${SITE_URL}/privacy`,
+  },
 };
 
 const UPDATED = "September 5, 2026";

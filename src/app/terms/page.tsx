@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
     "Terms & Conditions for Doctor Directory Bangladesh — listings, appointments, payments, medical disclaimer and acceptable use.",
+  alternates: {
+    canonical: `${SITE_URL}/terms`,
+  },
 };
 
 const UPDATED = "September 5, 2026";

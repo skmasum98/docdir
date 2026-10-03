@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { SITE_URL } from "@/lib/site-url";
 import { FacilitiesDirectoryView, type FacilityListItem, type DivisionOption } from "./facilities-directory-view";
 
 export const metadata: Metadata = {
@@ -19,6 +20,9 @@ export const metadata: Metadata = {
     title: "Hospitals & Diagnostic Centers Directory",
     description:
       "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh.",
+  },
+  alternates: {
+    canonical: `${SITE_URL}/facilities`,
   },
 };
 

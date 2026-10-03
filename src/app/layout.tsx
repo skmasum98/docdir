@@ -46,9 +46,6 @@ export const metadata: Metadata = {
     "healthcare Bangladesh",
   ],
   metadataBase: new URL(SITE_URL),
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     title: "Doctor Directory - Find Verified Doctors & Hospitals in Bangladesh",
     description: "Search verified specialist doctors, compare hospital diagnostic test prices, check patient prep guidelines, and book appointments with confidence.",

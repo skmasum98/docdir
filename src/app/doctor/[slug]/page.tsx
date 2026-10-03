@@ -34,22 +34,12 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-// Cache prerendered profile pages for 1h (revalidated on-demand when
-// doctors/bookings change). Session-dependent bits (booking prefill,
-// owner links, review gate) hydrate client-side via useSession().
+// On-demand ISR (refresh hourly, revalidated instantly on doctor/booking
+// edits). Doctor profiles are NOT bulk-prerendered: 200 heavy pages across
+// 7 parallel workers exhausts the hosted MySQL connection pool at build
+// time and breaks the build + sitemap generation. First visit renders on
+// demand, then serves from cache — same steady-state speed.
 export const revalidate = 3600;
-
-// Prerender the most recent published profiles at build time;
-// the rest generate on first visit, then cache.
-export async function generateStaticParams() {
-  const doctors = await prisma.doctor.findMany({
-    where: { status: "PUBLISHED" },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    select: { slug: true },
-  });
-  return doctors.map((d) => ({ slug: d.slug }));
-}
 
 /* =========================================================
    METADATA

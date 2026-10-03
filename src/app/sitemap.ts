@@ -35,7 +35,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const [
       doctors,
       facilities,
-      divisions,
       specialties,
     ] = await Promise.all([
       prisma.doctor.findMany({
@@ -48,24 +47,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
       }),
 
+      // Only list facilities that actually have content (linked doctors or
+      // active tests). Empty bulk-imported shells are thin pages — keep them
+      // crawlable via internal links, but don't invite Google to index them.
       prisma.facility.findMany({
         select: {
           slug: true,
           updatedAt: true,
-        },
-      }),
-
-      prisma.division.findMany({
-        select: {
-          slug: true,
-          districts: {
+          _count: {
             select: {
-              slug: true,
-              upazilas: {
-                select: {
-                  slug: true,
-                },
-              },
+              doctorFacilities: true,
+              tests: { where: { isActive: true } },
             },
           },
         },
@@ -78,6 +70,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }),
     ]);
 
+    // NOTE: /division/*, /division/*/district/* and */upazila/* URLs are
+    // intentionally NOT listed: those routes 307-redirect to /search?...,
+    // and redirecting URLs in a sitemap trigger "3XX redirect in sitemap"
+    // errors. The redirect pages keep working for shared/bookmarked links.
+
     const doctorPages: MetadataRoute.Sitemap = doctors.map(
       (doctor) => ({
         url: `${siteUrl}/doctor/${doctor.slug}`,
@@ -87,47 +84,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
     );
 
-    const facilityPages: MetadataRoute.Sitemap = facilities.map(
-      (facility) => ({
-        url: `${siteUrl}/facility/${facility.slug}`,
-        lastModified: facility.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      })
-    );
-
-    const locationPages: MetadataRoute.Sitemap =
-      divisions.flatMap((division) => {
-        const divisionPage: MetadataRoute.Sitemap[number] = {
-          url: `${siteUrl}/division/${division.slug}`,
-          lastModified: now,
+    const facilityPages: MetadataRoute.Sitemap = facilities
+      .filter((f) => f._count.doctorFacilities > 0 || f._count.tests > 0)
+      .map(
+        (facility) => ({
+          url: `${siteUrl}/facility/${facility.slug}`,
+          lastModified: facility.updatedAt,
           changeFrequency: "weekly",
-          priority: 0.6,
-        };
-
-        const districtPages = division.districts.flatMap(
-          (district) => {
-            const districtPage: MetadataRoute.Sitemap[number] = {
-              url: `${siteUrl}/division/${division.slug}/district/${district.slug}`,
-              lastModified: now,
-              changeFrequency: "weekly",
-              priority: 0.5,
-            };
-
-            const upazilaPages =
-              district.upazilas.map((upazila) => ({
-                url: `${siteUrl}/division/${division.slug}/district/${district.slug}/upazila/${upazila.slug}`,
-                lastModified: now,
-                changeFrequency: "weekly" as const,
-                priority: 0.4,
-              }));
-
-            return [districtPage, ...upazilaPages];
-          }
-        );
-
-        return [divisionPage, ...districtPages];
-      });
+          priority: 0.8,
+        })
+      );
 
     const specialtyPages: MetadataRoute.Sitemap =
       specialties.map((specialty) => ({
@@ -141,7 +107,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...staticPages,
       ...doctorPages,
       ...facilityPages,
-      ...locationPages,
       ...specialtyPages,
     ];
   } catch (error) {
