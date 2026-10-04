@@ -5,7 +5,7 @@ import { getQueueInfo } from "@/lib/queue-manager";
 import PatientAppointmentsView from "./appointments-view";
 
 export const metadata = {
-  title: "My Appointments | Dr Chamber Directory",
+  title: "My Appointments",
   description: "View and manage your doctor appointments, see live queue position.",
   robots: { index: false, follow: false },
 };

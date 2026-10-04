@@ -75,7 +75,7 @@ export function DoctorClaimBanner({ doctorId, doctorName }: DoctorClaimBannerPro
               </div>
               <h4 className="text-xs font-bold text-slate-900">1. Select Profile</h4>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                Click &quot;Claim Profile&quot; and sign in to your Doctor Directory account.
+                Click &quot;Claim Profile&quot; and sign in to your DrChamber account.
               </p>
             </div>
 

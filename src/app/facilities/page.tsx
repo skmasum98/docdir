@@ -13,7 +13,7 @@ export const metadata: Metadata = {
       "Search top hospitals, specialized diagnostic labs, imaging centers, and clinics in Bangladesh. Compare diagnostic test pricing, find practicing doctors, and 24/7 hotline numbers.",
     type: "website",
     locale: "en_BD",
-    siteName: "Doctor Directory",
+    siteName: "DrChamber",
   },
   twitter: {
     card: "summary_large_image",

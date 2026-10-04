@@ -5,7 +5,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Recover Password",
-  description: "Reset your Doctor Directory account password via Email or WhatsApp OTP verification.",
+  description: "Reset your DrChamber account password via Email or WhatsApp OTP verification.",
   robots: { index: false, follow: true },
 };
 

@@ -29,6 +29,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.9,
     },
+    {
+      url: `${siteUrl}/blog`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
+      url: `${siteUrl}/privacy`,
+      lastModified: new Date("2026-09-05"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${siteUrl}/terms`,
+      lastModified: new Date("2026-09-05"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
 
   try {
@@ -36,6 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       doctors,
       facilities,
       specialties,
+      blogs,
     ] = await Promise.all([
       prisma.doctor.findMany({
         where: {
@@ -66,6 +85,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       prisma.specialty.findMany({
         select: {
           slug: true,
+          updatedAt: true,
+        },
+      }),
+
+      prisma.blog.findMany({
+        where: { status: "PUBLISHED" },
+        select: {
+          slug: true,
+          updatedAt: true,
         },
       }),
     ]);
@@ -98,16 +126,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const specialtyPages: MetadataRoute.Sitemap =
       specialties.map((specialty) => ({
         url: `${siteUrl}/specialty/${specialty.slug}`,
-        lastModified: now,
+        lastModified: specialty.updatedAt,
         changeFrequency: "weekly",
         priority: 0.7,
       }));
+
+    const blogPages: MetadataRoute.Sitemap = blogs.map((post) => ({
+      url: `${siteUrl}/blog/${post.slug}`,
+      lastModified: post.updatedAt,
+      changeFrequency: "monthly",
+      priority: 0.6,
+    }));
 
     return [
       ...staticPages,
       ...doctorPages,
       ...facilityPages,
       ...specialtyPages,
+      ...blogPages,
     ];
   } catch (error) {
     const message =

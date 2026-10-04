@@ -81,7 +81,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: pageUrl,
-      siteName: "Doctor Directory",
+      siteName: "DrChamber",
       type: "website",
       locale: "en_BD",
     },
@@ -204,6 +204,7 @@ export default async function SpecialtyPage({ params, searchParams }: Props) {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `${specialty.name} Doctors in Bangladesh`,
+    numberOfItems: total,
     itemListElement: doctors.map((d, i) => ({
       "@type": "ListItem",
       position: (page - 1) * PAGE_SIZE + i + 1,

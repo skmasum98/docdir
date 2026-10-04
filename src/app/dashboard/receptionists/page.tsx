@@ -7,7 +7,7 @@ import { listReceptionistsAction } from "@/lib/actions/receptionist";
 import ReceptionistsManager from "./receptionists-manager";
 
 export const metadata = {
-  title: "Receptionists | Dr Chamber Directory",
+  title: "Receptionists",
   description: "Create and manage receptionist accounts to handle your patient queue offline.",
   robots: { index: false, follow: false },
 };

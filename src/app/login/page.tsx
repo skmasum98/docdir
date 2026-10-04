@@ -5,7 +5,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Login",
-  description: "Log in to your Doctor Directory account to manage your profile, reviews, and doctor listings.",
+  description: "Log in to your DrChamber account to manage your profile, reviews, and doctor listings.",
   robots: { index: false, follow: true },
 };
 

@@ -5,7 +5,7 @@ import { SITE_URL } from "@/lib/site-url";
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
-    "Terms & Conditions for Doctor Directory Bangladesh — listings, appointments, payments, medical disclaimer and acceptable use.",
+    "Terms & Conditions for DrChamber — listings, appointments, payments, medical disclaimer and acceptable use.",
   alternates: {
     canonical: `${SITE_URL}/terms`,
   },
@@ -30,7 +30,7 @@ export default function TermsPage() {
             1. The service
           </h2>
           <p className="mt-1">
-            Doctor Directory provides an online directory of doctors,
+            DrChamber provides an online directory of doctors,
             hospitals and diagnostic centers in Bangladesh, including
             specialties, chamber addresses, visiting hours, test prices and
             appointment requests. We are a listing and booking facilitator —

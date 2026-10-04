@@ -29,8 +29,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Doctor Directory Bangladesh - Find Verified Doctors & Hospitals",
-    template: "%s | Doctor Directory Bangladesh",
+    default: "DrChamber - Find Doctors, Hospitals & Test Prices in Bangladesh",
+    template: "%s | DrChamber",
   },
   description: "Find verified specialist doctors, hospitals, and diagnostic centers across Bangladesh. Compare diagnostic test prices, check patient prep guidelines, and book appointments with confidence.",
   keywords: [
@@ -47,15 +47,15 @@ export const metadata: Metadata = {
   ],
   metadataBase: new URL(SITE_URL),
   openGraph: {
-    title: "Doctor Directory - Find Verified Doctors & Hospitals in Bangladesh",
+    title: "DrChamber - Find Verified Doctors & Hospitals in Bangladesh",
     description: "Search verified specialist doctors, compare hospital diagnostic test prices, check patient prep guidelines, and book appointments with confidence.",
     type: "website",
     locale: "en_BD",
-    siteName: "Doctor Directory",
+    siteName: "DrChamber",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Doctor Directory - Find Verified Doctors & Hospitals in Bangladesh",
+    title: "DrChamber - Find Verified Doctors & Hospitals in Bangladesh",
     description: "Search verified specialist doctors, compare hospital diagnostic test prices, check patient prep guidelines, and book appointments with confidence.",
   },
   robots: {
@@ -69,9 +69,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  authors: [{ name: "Doctor Directory Team" }],
-  creator: "Doctor Directory",
-  publisher: "Doctor Directory",
+  authors: [{ name: "DrChamber Team" }],
+  creator: "DrChamber",
+  publisher: "DrChamber",
   formatDetection: {
     email: false,
     address: false,

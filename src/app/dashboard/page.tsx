@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Dashboard | Doctor Directory Bangladesh",
+  title: "Dashboard",
   description: "Manage your medical practice, chamber appointments, hospital facilities, and patient care.",
   robots: { index: false, follow: false },
 };

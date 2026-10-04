@@ -14,7 +14,7 @@ export function SiteFooter() {
               href="/"
               className="text-base font-bold tracking-tight text-slate-900"
             >
-              Doctor Directory
+              DrChamber
             </Link>
             <p className="mt-2 max-w-xs text-sm leading-6 text-slate-500">
               Find verified specialist doctors, hospitals &amp; diagnostic
@@ -101,7 +101,30 @@ export function SiteFooter() {
               Legal
             </p>
             <ul className="mt-3 space-y-2 text-sm">
-              
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-slate-600 transition hover:text-slate-900"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terms"
+                  className="text-slate-600 transition hover:text-slate-900"
+                >
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-slate-600 transition hover:text-slate-900"
+                >
+                  Health Articles
+                </Link>
+              </li>
             </ul>
             <p className="mt-4 text-xs leading-5 text-slate-400">
               Information on this site is for guidance only and is not a

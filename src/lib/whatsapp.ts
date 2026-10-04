@@ -130,7 +130,7 @@ async function sendViaTwilio(
   const body = new URLSearchParams({
     From: `whatsapp:${config.phoneNumberId}`,
     To: `whatsapp:${formatPhoneForWhatsApp(data.to)}`,
-    Body: `Hello ${data.userName},\n\nYour Doctor Directory verification code is: *${data.otp}*\n\nThis code expires in ${data.expiresMinutes} minutes.\n\nIf you did not request this, please ignore this message.\n\n- Doctor Directory Team`,
+    Body: `Hello ${data.userName},\n\nYour DrChamber verification code is: *${data.otp}*\n\nThis code expires in ${data.expiresMinutes} minutes.\n\nIf you did not request this, please ignore this message.\n\n- DrChamber Team`,
   });
 
   const response = await fetch(url, {

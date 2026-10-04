@@ -5,7 +5,7 @@ import { SITE_URL } from "@/lib/site-url";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Privacy Policy for Doctor Directory Bangladesh — what data we collect, how we use it, appointments, cookies, and your rights.",
+    "Privacy Policy for DrChamber — what data we collect, how we use it, appointments, cookies, and your rights.",
   alternates: {
     canonical: `${SITE_URL}/privacy`,
   },
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
             1. Who we are
           </h2>
           <p className="mt-1">
-            Doctor Directory (&ldquo;we&rdquo;, &ldquo;us&rdquo;) operates a
+            DrChamber (&ldquo;we&rdquo;, &ldquo;us&rdquo;) operates a
             healthcare directory for Bangladesh at drchamber.info, listing
             verified specialist doctors, hospitals and diagnostic centers,
             test prices and appointment information.

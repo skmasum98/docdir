@@ -114,7 +114,7 @@ export async function generateMetadata({
       title,
       description,
       url: pageUrl,
-      siteName: "Doctor Directory",
+      siteName: "DrChamber",
       type: "profile",
 
       images: doctor.profilePhoto
@@ -331,10 +331,7 @@ export default async function DoctorPage({
 
   const physicianSchema = {
     "@context": "https://schema.org",
-    "@type": [
-      "Physician",
-      "MedicalBusiness",
-    ],
+    "@type": "Physician",
 
     name: doctor.fullName,
 
@@ -358,17 +355,12 @@ export default async function DoctorPage({
       doctor.email || undefined,
 
     medicalSpecialty:
-      doctor.specialty?.name
-        ? `https://schema.org/${doctor.specialty.name.replace(
-            /\s+/g,
-            ""
-          )}`
-        : "GeneralMedicine",
+      doctor.specialty?.name || "GeneralMedicine",
 
     priceRange:
       doctor.consultationFee
-        ? `৳${doctor.consultationFee}`
-        : "৳৳",
+        ? `BDT ${doctor.consultationFee}`
+        : undefined,
 
     hasCredential: [
       doctor.degrees
@@ -445,10 +437,9 @@ export default async function DoctorPage({
         name:
           doctor.specialty?.name ||
           "Doctors",
-        item:
-          `${siteUrl}/search?specialtyId=${
-            doctor.specialtyId || ""
-          }`,
+        item: doctor.specialty
+          ? `${siteUrl}/specialty/${doctor.specialty.slug}`
+          : `${siteUrl}/search`,
       },
 
       {

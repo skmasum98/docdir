@@ -6,7 +6,7 @@ import { getTodayDhaka, dhakaDateToUTC, getDhakaDateString } from "@/lib/timezon
 import QueueManager from "../queue/queue-manager";
 
 export const metadata = {
-  title: "Receptionist Dashboard | Dr Chamber Directory",
+  title: "Receptionist Dashboard",
   description: "Manage patient queue, book walk-ins, and handle chamber schedules.",
   robots: { index: false, follow: false },
 };

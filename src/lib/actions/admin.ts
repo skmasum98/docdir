@@ -548,6 +548,8 @@ export async function createBlogAction(
     },
   });
   revalidatePath("/admin/blogs");
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${slug}`);
   redirect("/admin/blogs?saved=1");
 }
 
@@ -555,8 +557,14 @@ export async function deleteBlogAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return;
+  const existing = await prisma.blog.findUnique({
+    where: { id },
+    select: { slug: true },
+  });
   await prisma.blog.deleteMany({ where: { id } });
   revalidatePath("/admin/blogs");
+  revalidatePath("/blog");
+  if (existing) revalidatePath(`/blog/${existing.slug}`);
 }
 
 export async function updateUserAction(

@@ -18,7 +18,7 @@ import {
   Lock,
 } from "lucide-react";
 
-export const metadata = { title: "Claim Doctor Profile | Doctor Directory" };
+export const metadata = { title: "Claim Doctor Profile" };
 
 type Props = { searchParams: Promise<{ doctorId?: string }> };
 

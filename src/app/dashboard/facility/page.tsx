@@ -6,7 +6,7 @@ import { UserRole } from "@/lib/enums";
 import { Building2, Plus, Stethoscope, Sparkles, Phone, ShieldCheck, ChevronRight } from "lucide-react";
 import FacilityManagerView from "./facility-manager-view";
 
-export const metadata = { title: "Facility & Clinic Management Portal | Doctor Directory" };
+export const metadata = { title: "Facility & Clinic Management Portal" };
 
 type Props = {
   searchParams: Promise<{ saved?: string; tab?: string }>;

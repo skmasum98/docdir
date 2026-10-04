@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DoctorStatus, ClaimStatus } from "@/lib/enums";
 
-export const metadata = { title: "Admin | Doctor Directory" };
+export const metadata = { title: "Admin" };
 
 export default async function AdminHomePage() {
   const [doctors, specialties, facilities, users, pendingClaims, pendingReviews] =

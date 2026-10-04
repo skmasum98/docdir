@@ -5,7 +5,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Register",
-  description: "Create your Doctor Directory account to review doctors, book appointments, or list your medical practice.",
+  description: "Create your DrChamber account to review doctors, book appointments, or list your medical practice.",
   robots: { index: false, follow: true },
 };
 

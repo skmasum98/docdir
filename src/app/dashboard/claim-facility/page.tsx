@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Building2, ShieldCheck, CheckCircle2, ChevronRight, AlertCircle } from "lucide-react";
 import ClaimFacilityForm from "./claim-facility-form";
 
-export const metadata = { title: "Claim Hospital / Clinic Profile | Doctor Directory" };
+export const metadata = { title: "Claim Hospital / Clinic Profile" };
 
 type Props = {
   searchParams: Promise<{ facilityId?: string; success?: string }>;

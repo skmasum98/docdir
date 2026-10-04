@@ -7,7 +7,7 @@ import { getScheduleBlocksAction } from "@/lib/actions/queue";
 import ScheduleBlocksManager from "./schedules-manager";
 
 export const metadata = {
-  title: "Schedule Management | Dr Chamber Directory",
+  title: "Schedule Management",
   description: "Create and manage chamber schedules for specific dates with patient slots.",
   robots: { index: false, follow: false },
 };

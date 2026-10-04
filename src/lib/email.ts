@@ -21,8 +21,8 @@ function getTransporter(): Transporter {
     port: Number(process.env.SMTP_PORT || 587),
     user: process.env.SMTP_USER || "",
     password: process.env.SMTP_PASSWORD || "",
-    fromName: process.env.EMAIL_FROM_NAME || "Doctor Directory",
-    fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@doctordirectory.com",
+    fromName: process.env.EMAIL_FROM_NAME || "DrChamber",
+    fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@drchamber.info",
     secure: process.env.SMTP_SECURE === "true",
   };
 
@@ -60,8 +60,8 @@ export async function sendOtpEmail(data: OtpEmailData): Promise<{ success: boole
       port: Number(process.env.SMTP_PORT || 587),
       user: process.env.SMTP_USER || "",
       password: process.env.SMTP_PASSWORD || "",
-      fromName: process.env.EMAIL_FROM_NAME || "Doctor Directory",
-      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@doctordirectory.com",
+      fromName: process.env.EMAIL_FROM_NAME || "DrChamber",
+      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@drchamber.info",
     };
 
     const subjectMap = {
@@ -96,14 +96,14 @@ function getOtpEmailText(data: OtpEmailData): string {
   return `
 Hello ${data.userName},
 
-Your Doctor Directory verification code is: ${data.otp}
+Your DrChamber verification code is: ${data.otp}
 
 This code will expire in ${data.expiresMinutes} minutes.
 
 If you did not request this code, please ignore this email or contact our support team.
 
 Best regards,
-Doctor Directory Team
+DrChamber Team
   `.trim();
 }
 
@@ -130,7 +130,7 @@ function getOtpEmailTemplate(data: OtpEmailData): string {
           <!-- Header -->
           <tr>
             <td style="padding: 32px 32px 16px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-              <h1 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">Doctor Directory</h1>
+              <h1 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">DrChamber</h1>
             </td>
           </tr>
 
@@ -151,7 +151,7 @@ function getOtpEmailTemplate(data: OtpEmailData): string {
               <!-- Warning -->
               <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 12px; margin: 24px 0;">
                 <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.4;">
-                  <strong>⚠️ Security Notice:</strong> Never share this code with anyone. Doctor Directory staff will never ask for your verification code.
+                  <strong>⚠️ Security Notice:</strong> Never share this code with anyone. DrChamber staff will never ask for your verification code.
                 </p>
               </div>
 
@@ -165,7 +165,7 @@ function getOtpEmailTemplate(data: OtpEmailData): string {
           <tr>
             <td style="padding: 16px 32px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="margin: 0; color: #94a3b8; font-size: 12px;">
-                &copy; ${new Date().getFullYear()} Doctor Directory Bangladesh
+                &copy; ${new Date().getFullYear()} DrChamber
               </p>
               <p style="margin: 8px 0 0; color: #94a3b8; font-size: 11px;">
                 This is an automated message. Please do not reply.
@@ -224,8 +224,8 @@ export async function sendBookingConfirmationEmail(data: BookingEmailData): Prom
       port: Number(process.env.SMTP_PORT || 587),
       user: process.env.SMTP_USER || "",
       password: process.env.SMTP_PASSWORD || "",
-      fromName: process.env.EMAIL_FROM_NAME || "Doctor Directory",
-      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@doctordirectory.com",
+      fromName: process.env.EMAIL_FROM_NAME || "DrChamber",
+      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@drchamber.info",
     };
 
     const transport = getTransporter();
@@ -273,7 +273,7 @@ Please arrive at the chamber 10-15 minutes before your scheduled time. Show this
 To view your live queue position or cancel this appointment, log in to your account at drchamber.info
 
 Best regards,
-Dr Chamber Directory Team
+DrChamber Team
   `.trim();
 }
 
@@ -357,7 +357,7 @@ function getBookingEmailTemplate(data: BookingEmailData, dateStr: string, timeSt
           <!-- Footer -->
           <tr>
             <td style="padding: 16px 32px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; color: #94a3b8; font-size: 12px;">&copy; ${new Date().getFullYear()} Dr Chamber Directory</p>
+              <p style="margin: 0; color: #94a3b8; font-size: 12px;">&copy; ${new Date().getFullYear()} DrChamber</p>
             </td>
           </tr>
         </table>
@@ -383,8 +383,8 @@ export async function sendQueueAdvanceEmail(data: QueueAdvanceEmailData): Promis
       port: Number(process.env.SMTP_PORT || 587),
       user: process.env.SMTP_USER || "",
       password: process.env.SMTP_PASSWORD || "",
-      fromName: process.env.EMAIL_FROM_NAME || "Doctor Directory",
-      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@doctordirectory.com",
+      fromName: process.env.EMAIL_FROM_NAME || "DrChamber",
+      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@drchamber.info",
     };
 
     const transport = getTransporter();
@@ -430,8 +430,8 @@ export async function sendCancellationEmail(data: CancellationEmailData): Promis
       port: Number(process.env.SMTP_PORT || 587),
       user: process.env.SMTP_USER || "",
       password: process.env.SMTP_PASSWORD || "",
-      fromName: process.env.EMAIL_FROM_NAME || "Doctor Directory",
-      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@doctordirectory.com",
+      fromName: process.env.EMAIL_FROM_NAME || "DrChamber",
+      fromEmail: process.env.EMAIL_FROM_ADDRESS || "noreply@drchamber.info",
     };
 
     const transport = getTransporter();

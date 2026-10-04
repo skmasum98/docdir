@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import SmsManager from "./sms-manager";
 
 export const metadata = {
-  title: "SMS Notifications | Dr Chamber Directory",
+  title: "SMS Notifications",
   description: "Manage SMS notifications for your patient bookings. Powered by BulkSMS BD.",
   robots: { index: false, follow: false },
 };

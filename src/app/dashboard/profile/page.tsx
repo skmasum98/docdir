@@ -8,7 +8,7 @@ import ProfileSection from "../profile-section";
 import { ArrowLeft, Stethoscope, Building2, User, ChevronRight } from "lucide-react";
 
 export const metadata = {
-  title: "Profile & Settings | Doctor Directory",
+  title: "Profile & Settings",
   description: "Update your personal credentials, contact info, and profile details.",
   robots: { index: false, follow: false },
 };

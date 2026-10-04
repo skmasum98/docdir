@@ -129,7 +129,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${facility.name} - ${typeName} in ${location}`,
       description: description.slice(0, 160),
       url: pageUrl,
-      siteName: "Doctor Directory",
+      siteName: "DrChamber",
       type: "website",
       images: facility.logo
         ? [
@@ -208,7 +208,7 @@ export default async function FacilityPage({ params }: Props) {
       addressRegion: facility.upazila?.district?.name || "",
       addressCountry: "BD",
     },
-    priceRange: "৳৳",
+    priceRange: "BDT",
     medicalSpecialty: facility.doctorFacilities
       .map((df) => df.doctor.specialty?.name)
       .filter(Boolean)
